@@ -1,44 +1,46 @@
 #  _____________________________________________________________________________
-#  Copyright (c) 2018-2020 Steven Varga, Toronto,ON Canada
+#  Copyright (c) 2018-2025 Steven Varga, Toronto,ON Canada
 #  Author: Varga, Steven <steven@vargaconsulting.ca>
 #  _____________________________________________________________________________
 
-cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.14)
 project(h5cpp-compiler-dev VERSION 1.10.4.6 LANGUAGES CXX C)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
-find_package(LLVM 6.0.0 REQUIRED CONFIG)
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 
-include(GNUInstallDirs)
+# Use modern LLVM/Clang
+find_package(LLVM REQUIRED CONFIG)
+find_package(Clang REQUIRED CONFIG)
 
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
-link_directories(${LLVM_LIBRARY_DIRS})
+message(STATUS "Using LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "LLVM_DIR: ${LLVM_DIR}")
+message(STATUS "CLANG_DIR: ${Clang_DIR}")
+
+# Enable RTTI if needed (Clang requires it)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+
+# Explicit executable target
 add_executable(h5cpp src/h5cpp.cpp)
 
-target_link_libraries(h5cpp
-  LLVM
-  clangFrontend
-  clangSerialization
-  clangDriver
-  clangParse
-  clangSema
-  clangAnalysis
-  clangRewrite
-  clangRewriteFrontend
-  clangASTMatchers
-  clangAST
-  clangBasic
-  clangEdit
-  clangLex
-  clangTooling
+# Modern include + defs
+target_include_directories(h5cpp PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${CLANG_INCLUDE_DIRS}
 )
-set(INSTALL_DIR_BIN  "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}")
-set(INSTALL_DIR_MAN  "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_MANDIR}/man1")
 
-message(${INSTALL_DIR_MAN})
-install(TARGETS h5cpp DESTINATION ${INSTALL_DIR_BIN})
-install(FILES h5cpp.1 DESTINATION ${INSTALL_DIR_MAN})
+target_compile_definitions(h5cpp PRIVATE
+  ${LLVM_DEFINITIONS}
+)
 
+# Link against modern LLVM/Clang targets
+target_link_libraries(h5cpp
+  PRIVATE
+    clangTooling
+)
+
+# Install directives
+include(GNUInstallDirs)
+install(TARGETS h5cpp DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES h5cpp.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
