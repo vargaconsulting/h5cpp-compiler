@@ -1,10 +1,13 @@
-<!---
- Copyright (c) 2018-2020 Steven Varga, Toronto,ON Canada
- Author: Varga, Steven <steven@vargaconsulting.ca>
---->
 
-Source code transformation tool for HDF5 dataformat  H5CPP header only library  
-----------------------------------------------------------------------------------------------------
+[![CI](https://github.com/vargaconsulting/h5cpp-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/vargaconsulting/h5cpp-compiler/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/vargaconsulting/h5cpp-compiler/branch/main/graph/badge.svg)](https://codecov.io/gh/vargaconsulting/h5cpp-compiler)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17069343.svg)](https://doi.org/10.5281/zenodo.17069343)
+
+[![GitHub release](https://img.shields.io/github/v/release/vargaconsulting/h5cpp-compiler.svg)](https://github.com/vargaconsulting/h5cpp-compiler/releases)
+[![Documentation](https://img.shields.io/badge/docs-stable-blue)](https://vargaconsulting.github.io/h5cpp-compiler)
+
+# Source code transformation tool for HDF5 dataformat  H5CPP header only library  
 ## Build Matrix
 
 | OS / Compiler | GCC 13      | GCC 14      | GCC 15      | Clang 14      | Clang 15      | Clang 17      |
