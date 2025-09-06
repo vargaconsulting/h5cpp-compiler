@@ -80,8 +80,12 @@ int main(int argc, const char **argv) {
 		"H5CPP: Copyright (c) 2018-2020, VargaConsulting, Toronto,ON Canada\n"
 	   	"LLVM : Copyright (c) 2003-2010, University of Illinois at Urbana-Champaign.\n"
 	;
-
-	CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
+	auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
+	if (!ExpectedParser) {
+		llvm::errs() << ExpectedParser.takeError();
+		return 1;
+	}
+	CommonOptionsParser &OptionsParser = ExpectedParser.get();
 	ClangTool Tool(OptionsParser.getCompilations(),
 				 OptionsParser.getSourcePathList());
 	H5TemplateCallback<H5Producer> callback( path );
