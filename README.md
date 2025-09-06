@@ -5,6 +5,15 @@
 
 Source code transformation tool for HDF5 dataformat  H5CPP header only library  
 ----------------------------------------------------------------------------------------------------
+## Build Matrix
+
+| OS / Compiler | GCC 13      | GCC 14      | GCC 15      | Clang 14      | Clang 15      | Clang 17      |
+|---------------|-------------|-------------|-------------|---------------|---------------|---------------|
+| Ubuntu 22.04  |![gcc13][200]|![gcc14][201]|![gcc15][202]|![clang14][210]|![clang15][211]|![clang17][212]|
+| Ubuntu 24.04  |![gcc13][300]|![gcc14][301]|![gcc15][302]|![clang14][310]|![clang15][311]|![clang17][312]|
+| macOS         |![gcc13][600]|![gcc14][601]|![gcc15][602]|![clang14][610]|![clang15][611]|![clang17][612]|
+| Windows       |![gcc13][700]|![gcc13][701]|![gcc13][702]|![clang14][710]|![clang15][711]|![clang17][712]|
+
 
 This source code transformation tool simplifies the otherwise time consuming process of generating the shim code for HDF5 Compound datatypes by building the AST of a given TU translation unit, and identifying all POD datatypes referenced from H5CPP operators/functions.
 The result is a seamless persistence much similar to python, java or other reflection based languages. 
@@ -68,64 +77,34 @@ namespace sn {
 	/* END IGNORED STRUCTS */
 ```
 
-Install:
-----------
-Only **LLVM 6.0 is supported**, to compile from  source you need both the llvm and clang-dev package installed:
-```
-sudo apt install llvm-6.0 llvm-6.0-dev libclang-6.0-dev  # 640MB space needed
-make && make install                                     # compile the source code transforation tool
-```
-optionally you can remove the development libraries, and install only the runtime
-```
-sudo apt purge llvm-6.0 libllvm-6.0-dev libclang-6.0-dev # remove development libraries
-sudo apt install libllvm6.0 libclang-common-6.0-dev      # install runtime dependencies
-```
+<!-- Ubuntu 22.04 -->
+[200]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-22.04-gcc-13.svg
+[201]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-22.04-gcc-14.svg
+[202]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-22.04-gcc-15.svg
+[210]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-22.04-clang-14.svg
+[211]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-22.04-clang-15.svg
+[212]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-22.04-clang-17.svg
 
-Caveat:
--------
-All LLVM version other than 6.0 is failing, or crashing including the clang++ chain. This is being investigated, and once resolved this message
-will be removed.
+<!-- Ubuntu 24.04 -->
+[300]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-24.04-gcc-13.svg
+[301]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-24.04-gcc-14.svg
+[302]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-24.04-gcc-15.svg
+[310]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-24.04-clang-14.svg
+[311]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-24.04-clang-15.svg
+[312]: https://vargaconsulting.github.io/h5cpp-compiler/badges/ubuntu-24.04-clang-17.svg
 
-Usage:
--------
-`h5cpp  your_translation_unit.cpp -- -v $(CXXFLAGS)  -Dgenerated.h`
-will run the compiler front end on the specified input, and outputs the necessary HDF5 type descriptors, or 
-the error message if any.
+<!-- macOS latest -->
+[600]: https://vargaconsulting.github.io/h5cpp-compiler/badges/macos-latest-gcc-13.svg
+[601]: https://vargaconsulting.github.io/h5cpp-compiler/badges/macos-latest-gcc-14.svg
+[602]: https://vargaconsulting.github.io/h5cpp-compiler/badges/macos-latest-gcc-15.svg
+[610]: https://vargaconsulting.github.io/h5cpp-compiler/badges/macos-latest-clang-14.svg
+[611]: https://vargaconsulting.github.io/h5cpp-compiler/badges/macos-latest-clang-15.svg
+[612]: https://vargaconsulting.github.io/h5cpp-compiler/badges/macos-latest-clang-17.svg
 
-
-
-[hdf5]: https://support.hdfgroup.org/HDF5/doc/H5.intro.html
-[1]: http://en.cppreference.com/w/cpp/container/vector
-[2]: http://arma.sourceforge.net
-[4]: https://support.hdfgroup.org/HDF5/doc/RM/RM_H5Front.html
-[5]: https://support.hdfgroup.org/HDF5/release/obtain5.html
-[6]: http://eigen.tuxfamily.org/index.php?title=Main_Page
-[7]: http://www.boost.org/doc/libs/1_65_1/libs/numeric/ublas/doc/matrix.htm
-[8]: https://julialang.org/
-[9]: https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_.28CSR.2C_CRS_or_Yale_format.29
-[10]: https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_column_.28CSC_or_CCS.29
-[11]: https://en.wikipedia.org/wiki/List_of_numerical_libraries#C++
-[12]: http://en.cppreference.com/w/cpp/concept/StandardLayoutType
-[40]: https://support.hdfgroup.org/HDF5/Tutor/HDF5Intro.pdf
-[99]: https://en.wikipedia.org/wiki/C_(programming_language)#Pointers
-[100]: http://arma.sourceforge.net/
-[101]: http://www.boost.org/doc/libs/1_66_0/libs/numeric/ublas/doc/index.html
-[102]: http://eigen.tuxfamily.org/index.php?title=Main_Page#Documentation
-[103]: https://sourceforge.net/projects/blitz/
-[104]: https://sourceforge.net/projects/itpp/
-[105]: http://dlib.net/linear_algebra.html
-[106]: https://bitbucket.org/blaze-lib/blaze
-[107]: https://github.com/wichtounet/etl
-[200]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_profiling_README.html
-[201]: http://h5cpp.org/examples.html
-[202]: http://h5cpp.org/modules.html
-[305]: md__home_steven_Documents_projects_h5cpp_docs_pages_compiler_trial.html#link_try_compiler
-[400]: https://www.meetup.com/Chicago-C-CPP-Users-Group/events/250655716/
-[401]: https://www.hdfgroup.org/2018/07/cpp-has-come-a-long-way-and-theres-plenty-in-it-for-users-of-hdf5/
-[999]: http://h5cpp.org/cgi/redirect.py
-[301]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_docs_pages_conversion.html
-[302]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_docs_pages_exceptions.html
-[303]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_docs_pages_compiler.html
-[304]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_docs_pages_linalg.html
-[305]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_docs_pages_install.html
-[400]: http://h5cpp.org/md__home_steven_Documents_projects_h5cpp_docs_pages_error_handling.html
+<!-- Windows (clang & gcc) -->
+[700]: https://vargaconsulting.github.io/h5cpp-compiler/badges/windows-latest-gcc-13.svg
+[701]: https://vargaconsulting.github.io/h5cpp-compiler/badges/windows-latest-gcc-14.svg
+[702]: https://vargaconsulting.github.io/h5cpp-compiler/badges/windows-latest-gcc-15.svg
+[710]: https://vargaconsulting.github.io/h5cpp-compiler/badges/windows-latest-clang-14.svg
+[711]: https://vargaconsulting.github.io/h5cpp-compiler/badges/windows-latest-clang-15.svg
+[712]: https://vargaconsulting.github.io/h5cpp-compiler/badges/windows-latest-clang-17.svg
