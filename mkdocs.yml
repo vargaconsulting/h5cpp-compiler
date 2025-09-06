@@ -1,0 +1,78 @@
+site_name: H5CPP Compiler
+site_url: https://steven-varga.ca
+site_description: H5CPP — Reverse Schema Compiler for C and C++
+site_author: Steven Varga
+copyright: Steven Varga
+docs_dir: docs
+twitter_handle: "@vargaconsulting"
+nav:
+  - Introduction: index.md
+plugins:
+  - search
+theme:
+  name: material
+  custom_dir: docs/overrides
+  features:
+    - navigation.instant 
+    - search.suggest
+    - content.code.copy
+    - content.tooltips    
+  icon:
+  admonition:
+  palette:
+    - scheme: solarized
+      primary: orange
+      toggle:
+        icon: material/lightbulb
+        name: Switch to dark mode
+    - scheme: slate
+      primary: orange
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to light mode
+extra:
+  social:
+    - icon: material/whatsapp
+      link: https://wa.me/16475611829
+    - icon: material/email-fast
+      link: mailto:steven@vargaconsulting.ca
+    - icon: material/twitter
+      link: https://x.com/vargaconsulting
+    - icon: material/linkedin
+      link: https://www.linkedin.com/in/steven-varga-04224a19/
+    - icon: material/github 
+      link: https://github.com/vargaconsulting
+
+  analytics:
+    provider: google
+    property: G-XCXX1L29GM 
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - pymdownx.tabbed:
+      alternate_style: true  
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.blocks.caption
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde  
+  - pymdownx.critic
+  - pymdownx.keys
+  - pymdownx.snippets:
+  
+extra_javascript:
+  - https://cdn.tailwindcss.com 
+  - javascripts/tw-config.js   
+  - https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js
+
+extra_css:
+  - styles/custom.css
+  - styles/background.css
