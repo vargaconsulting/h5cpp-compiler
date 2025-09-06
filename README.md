@@ -23,6 +23,14 @@ The result is a seamless persistence much similar to python, java or other refle
 
 The following excerpt shows the mechanism, how `vec` variable is marked by `h5::write` operator. When `h5cpp` tool is invoked it builds the full AST of the translation unit, finds the referenced types, then in topological order generates HDF5 COMPOUND datatype descriptors. The generated file has include guards, and meant to be used with [H5CPP template library](h5cpp.org). POD struct types may be arbitrary deep, embedded in POD C like arrays, and may be referenced from STL containers. Currently `stl::vector` is supported, but in time full support will be provided.
 
+## Installation
+```bash
+sudo apt install build-essential cmake
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build --parallel
+sudo cmake --install build
+```
+
 ```cpp
 ...
 std::vector<sn::example::Record> vec 
@@ -78,6 +86,29 @@ namespace sn {
 		float        field_0n;
 	};
 	/* END IGNORED STRUCTS */
+```
+
+
+# Python virtual environment for this website
+
+## Setup
+
+```bash
+python3 -m venv .venv                 # Create a virtual env (Python 3.10+ recommended)
+source .venv/bin/activate             # Activate: Linux / macOS
+# On Windows use: .venv\Scripts\activate
+
+pip install --upgrade pip             # Upgrade pip
+pip install mkdocs-material           # Install MkDocs + Material theme
+pip install python-frontmatter jinja2 python-dateutil pyyaml  # Extra deps
+```
+
+## Run MkDocs locally
+
+```bash
+source .venv/bin/activate
+mkdocs serve --dev-addr=127.0.0.1:9000   # Live preview at http://127.0.0.1:9000
+mkdocs build -v                          # Build static site locally
 ```
 
 <!-- Ubuntu 22.04 -->
