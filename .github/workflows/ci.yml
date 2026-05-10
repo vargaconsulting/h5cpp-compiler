@@ -378,3 +378,107 @@ jobs:
           publish_dir: ./${{ github.ref_name == 'staging' && 'badges-staging' || 'badges' }}
           destination_dir: ${{ github.ref_name == 'staging' && 'badges-staging' || 'badges' }}
           keep_files: true
+
+  coverage:
+    name: coverage / ubuntu-24.04 / gcc-14
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    env:
+      CC: gcc-14
+      CXX: g++-14
+      GCOV: gcov-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap apt and add LLVM repository
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-18 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          sudo apt-get update
+
+      - name: Install dependencies (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-18-dev
+            libclang-18-dev
+            clang-18
+            cmake
+            ninja-build
+            gcc-14
+            g++-14
+            lcov
+          version: ubuntu-24.04-coverage-v1
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          llvm_cmakedir="$(llvm-config-18 --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang-18"
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DCMAKE_C_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
+            -DLLVM_DIR="${llvm_cmakedir}" \
+            -DClang_DIR="${clang_cmakedir}"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        run: ctest --test-dir build --output-on-failure --parallel
+
+      - name: Capture coverage
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          lcov \
+            --gcov-tool /usr/bin/gcov-14 \
+            --rc geninfo_unexecuted_blocks=1 \
+            --directory build \
+            --capture \
+            --output-file coverage.full.info
+
+          lcov \
+            --gcov-tool /usr/bin/gcov-14 \
+            --remove coverage.full.info \
+              '/usr/*' \
+              '*/tests/*' \
+              '*/build/*' \
+            --ignore-errors unused \
+            --output-file coverage.info
+
+          rm coverage.full.info
+          lcov --gcov-tool /usr/bin/gcov-14 --list coverage.info
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.info
+          disable_search: true
+          fail_ci_if_error: true
+          disable_telem: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
