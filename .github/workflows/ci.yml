@@ -200,21 +200,40 @@ jobs:
           Copy-Item "$src\*" "C:\Program Files\LLVM\" -Recurse -Force
           choco install ninja -y --no-progress
 
-          # LLVM 18.1.8 was built with VS 2019; its cmake exports hardcode VS 2019 DIA SDK paths.
-          # Create a junction from the expected VS 2019 path to wherever diaguids.lib lives now.
-          $dia = Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Filter "diaguids.lib" `
-                   -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($dia) {
-            $dia_sdk_root = $dia.DirectoryName | Split-Path -Parent | Split-Path -Parent
-            $expected = "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\DIA SDK"
-            if (-not (Test-Path $expected)) {
-              New-Item -ItemType Directory -Force (Split-Path $expected -Parent) | Out-Null
-              New-Item -ItemType Junction -Path $expected -Target $dia_sdk_root | Out-Null
-              Write-Host "DIA SDK junction: $expected -> $dia_sdk_root"
-            }
-          } else {
-            Write-Warning "diaguids.lib not found on this runner"
+      - name: Patch LLVM cmake for DIA SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # LLVM 18.1.8 was built with VS 2019; its cmake exports hardcode the VS 2019 DIA SDK path.
+          # This step runs every time (not gated on cache) and rewrites that path to wherever
+          # diaguids.lib actually lives on this runner.
+          $old_path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK/lib/amd64/diaguids.lib"
+
+          $dia_file = Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Filter "diaguids.lib" `
+                        -Recurse -ErrorAction SilentlyContinue |
+                        Where-Object { $_.FullName -like "*amd64*" } |
+                        Select-Object -First 1
+
+          if (-not $dia_file) {
+            Write-Warning "diaguids.lib not found — linker may fail for PDB targets"
+            exit 0
           }
+
+          $actual = $dia_file.FullName -replace '\\', '/'
+          Write-Host "diaguids.lib found at: $actual"
+
+          $patched = 0
+          Get-ChildItem "C:\Program Files\LLVM\lib\cmake" -Filter "*.cmake" -Recurse |
+          ForEach-Object {
+            $text = [System.IO.File]::ReadAllText($_.FullName)
+            if ($text.Contains($old_path)) {
+              Write-Host "Patching $($_.Name)"
+              $text = $text.Replace($old_path, $actual)
+              [System.IO.File]::WriteAllText($_.FullName, $text)
+              $patched++
+            }
+          }
+          Write-Host "Patched $patched cmake file(s)"
 
       - name: Export Windows environment
         if: runner.os == 'Windows'
