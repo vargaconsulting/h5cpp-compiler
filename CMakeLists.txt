@@ -8,9 +8,15 @@ project(h5cpp-compiler-dev VERSION 1.10.4.6 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
 
-# Use modern LLVM/Clang
+if(NOT MSVC)
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
+endif()
+
+if(WIN32 AND NOT LLVM_DIR)
+  list(APPEND CMAKE_PREFIX_PATH "C:/Program Files/LLVM")
+endif()
+
 find_package(LLVM REQUIRED CONFIG)
 find_package(Clang REQUIRED CONFIG)
 
@@ -18,8 +24,9 @@ message(STATUS "Using LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "LLVM_DIR: ${LLVM_DIR}")
 message(STATUS "CLANG_DIR: ${Clang_DIR}")
 
-# Enable RTTI if needed (Clang requires it)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+if(NOT MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
+endif()
 
 # Explicit executable target
 add_executable(h5cpp src/h5cpp.cpp)
