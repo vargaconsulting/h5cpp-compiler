@@ -25,10 +25,9 @@ message(STATUS "LLVM_DIR: ${LLVM_DIR}")
 message(STATUS "CLANG_DIR: ${Clang_DIR}")
 
 if(APPLE AND LLVM_TOOLS_BINARY_DIR AND LLVM_VERSION_MAJOR)
-  # LibTooling resolves its resource dir relative to the binary at runtime
-  # (looking for <binary>/../lib/clang/<major>/). The build tree has no such
-  # path when using a Homebrew LLVM install, so create a symlink here so
-  # tests run without needing -resource-dir flags.
+  # LibTooling resolves its resource dir as <binary-dir>/../lib/clang/<major>.
+  # We place the binary in build/bin/ so that path resolves to build/lib/clang/<major>,
+  # then symlink that to Homebrew LLVM's actual resource directory.
   get_filename_component(_llvm_prefix "${LLVM_TOOLS_BINARY_DIR}" DIRECTORY)
   set(_rdir_src "${_llvm_prefix}/lib/clang/${LLVM_VERSION_MAJOR}")
   set(_rdir_dst "${CMAKE_BINARY_DIR}/lib/clang/${LLVM_VERSION_MAJOR}")
@@ -45,6 +44,14 @@ endif()
 
 # Explicit executable target
 add_executable(h5cpp src/h5cpp.cpp)
+
+if(APPLE)
+  # Keep the binary one level below the build root so LibTooling's resource dir
+  # search (binary-dir/../lib/clang/<major>) resolves to build/lib/clang/<major>.
+  set_target_properties(h5cpp PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+  )
+endif()
 
 # Modern include + defs
 target_include_directories(h5cpp PRIVATE
