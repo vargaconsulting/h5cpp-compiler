@@ -20,12 +20,6 @@ cmake_minimum_required(VERSION 3.14)
 get_filename_component(fixture_name "${FIXTURE}" NAME_WE)
 set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
 
-# VS 2026 MSVC STL rejects older clang-cl versions via STL1000.
-set(_extra_flags "")
-if(CMAKE_HOST_WIN32)
-  list(APPEND _extra_flags "-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
-endif()
-
 execute_process(
   COMMAND
     "${H5CPP_BIN}"
@@ -34,7 +28,6 @@ execute_process(
     -std=c++17
     "-I${STUB_DIR}"
     "-D${observed}"
-    ${_extra_flags}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE tool_stdout
   ERROR_VARIABLE  tool_stderr

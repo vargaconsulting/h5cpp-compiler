@@ -71,7 +71,8 @@ jobs:
           - os: windows-latest
             compiler: msvc
             compiler-version: native
-            llvm-version: 18
+            llvm-version: 19
+            llvm-patch-version: 19.1.7
 
     steps:
       - name: Checkout
@@ -179,7 +180,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\Program Files\LLVM
-          key: windows-llvm-${{ matrix.llvm-version }}-dev-v1
+          key: windows-llvm-${{ matrix.llvm-version }}-dev-v2
 
       - name: Install LLVM toolchain (Windows)
         if: runner.os == 'Windows' && steps.cache-llvm-windows.outputs.cache-hit != 'true'
@@ -187,7 +188,7 @@ jobs:
         run: |
           # choco llvm ships the compiler-only installer which lacks cmake dev files.
           # Download the full LLVM dev tarball from GitHub releases instead.
-          $ver = "${{ matrix.llvm-version }}.1.8"
+          $ver = "${{ matrix.llvm-patch-version }}"
           $archive = "clang+llvm-${ver}-x86_64-pc-windows-msvc.tar.xz"
           $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-${ver}/${archive}"
           Write-Host "Downloading $url"
