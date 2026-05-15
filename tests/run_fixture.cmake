@@ -20,6 +20,11 @@ cmake_minimum_required(VERSION 3.14)
 get_filename_component(fixture_name "${FIXTURE}" NAME_WE)
 set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
 
+set(_extra_flags "")
+if(APPLE AND DEFINED ENV{SDKROOT} AND NOT "$ENV{SDKROOT}" STREQUAL "")
+  list(APPEND _extra_flags -isysroot "$ENV{SDKROOT}")
+endif()
+
 execute_process(
   COMMAND
     "${H5CPP_BIN}"
@@ -28,6 +33,7 @@ execute_process(
     -std=c++17
     "-I${STUB_DIR}"
     "-D${observed}"
+    ${_extra_flags}
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE tool_stdout
   ERROR_VARIABLE  tool_stderr

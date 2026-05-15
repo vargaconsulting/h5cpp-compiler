@@ -136,7 +136,7 @@ jobs:
           fi
 
           llvm_cmakedir="$(llvm-config-${llvm_version} --cmakedir)"
-          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang-${llvm_version}"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
           echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
           echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
 
@@ -169,6 +169,7 @@ jobs:
           echo "CXX=/usr/bin/clang++" >> "$GITHUB_ENV"
           echo "LLVM_DIR=${llvm_prefix}/lib/cmake/llvm" >> "$GITHUB_ENV"
           echo "Clang_DIR=${llvm_prefix}/lib/cmake/clang" >> "$GITHUB_ENV"
+          echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
 
           /usr/bin/clang++ --version
           "${llvm_prefix}/bin/llvm-config" --version
