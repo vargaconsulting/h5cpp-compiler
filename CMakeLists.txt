@@ -24,6 +24,21 @@ message(STATUS "Using LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "LLVM_DIR: ${LLVM_DIR}")
 message(STATUS "CLANG_DIR: ${Clang_DIR}")
 
+if(APPLE AND LLVM_TOOLS_BINARY_DIR AND LLVM_VERSION_MAJOR)
+  # LibTooling resolves its resource dir relative to the binary at runtime
+  # (looking for <binary>/../lib/clang/<major>/). The build tree has no such
+  # path when using a Homebrew LLVM install, so create a symlink here so
+  # tests run without needing -resource-dir flags.
+  get_filename_component(_llvm_prefix "${LLVM_TOOLS_BINARY_DIR}" DIRECTORY)
+  set(_rdir_src "${_llvm_prefix}/lib/clang/${LLVM_VERSION_MAJOR}")
+  set(_rdir_dst "${CMAKE_BINARY_DIR}/lib/clang/${LLVM_VERSION_MAJOR}")
+  if(EXISTS "${_rdir_src}" AND NOT EXISTS "${_rdir_dst}")
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/lib/clang")
+    file(CREATE_LINK "${_rdir_src}" "${_rdir_dst}" SYMBOLIC)
+    message(STATUS "Linked resource dir: ${_rdir_dst} -> ${_rdir_src}")
+  endif()
+endif()
+
 if(NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti")
 endif()

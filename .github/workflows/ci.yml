@@ -169,8 +169,6 @@ jobs:
           echo "CXX=/usr/bin/clang++" >> "$GITHUB_ENV"
           echo "LLVM_DIR=${llvm_prefix}/lib/cmake/llvm" >> "$GITHUB_ENV"
           echo "Clang_DIR=${llvm_prefix}/lib/cmake/clang" >> "$GITHUB_ENV"
-          llvm_major=$("${llvm_prefix}/bin/llvm-config" --version | cut -d. -f1)
-          echo "LLVM_RESOURCE_DIR=${llvm_prefix}/lib/clang/${llvm_major}" >> "$GITHUB_ENV"
 
           /usr/bin/clang++ --version
           "${llvm_prefix}/bin/llvm-config" --version
@@ -181,13 +179,25 @@ jobs:
         uses: actions/cache@v4
         with:
           path: C:\Program Files\LLVM
-          key: windows-llvm-${{ matrix.llvm-version }}-v1
+          key: windows-llvm-${{ matrix.llvm-version }}-dev-v1
 
       - name: Install LLVM toolchain (Windows)
         if: runner.os == 'Windows' && steps.cache-llvm-windows.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          choco install llvm --version=${{ matrix.llvm-version }}.1.0 --allow-downgrade -y --no-progress
+          # choco llvm ships the compiler-only installer which lacks cmake dev files.
+          # Download the full LLVM dev tarball from GitHub releases instead.
+          $ver = "${{ matrix.llvm-version }}.1.8"
+          $archive = "clang+llvm-${ver}-x86_64-pc-windows-msvc.tar.xz"
+          $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-${ver}/${archive}"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          Write-Host "Extracting..."
+          tar -xf $archive
+          $src = (Get-ChildItem -Directory "clang+llvm-*")[0].FullName
+          Write-Host "Installing to C:\Program Files\LLVM"
+          New-Item -ItemType Directory -Force "C:\Program Files\LLVM" | Out-Null
+          Copy-Item "$src\*" "C:\Program Files\LLVM\" -Recurse -Force
           choco install ninja -y --no-progress
 
       - name: Export Windows environment
