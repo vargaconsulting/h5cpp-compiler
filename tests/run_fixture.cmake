@@ -21,8 +21,8 @@ get_filename_component(fixture_name "${FIXTURE}" NAME_WE)
 set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
 
 set(_extra_flags "")
-if(APPLE AND DEFINED ENV{SDKROOT} AND NOT "$ENV{SDKROOT}" STREQUAL "")
-  list(APPEND _extra_flags -isysroot "$ENV{SDKROOT}")
+if(DEFINED ENV{LLVM_RESOURCE_DIR} AND NOT "$ENV{LLVM_RESOURCE_DIR}" STREQUAL "")
+  list(APPEND _extra_flags -resource-dir "$ENV{LLVM_RESOURCE_DIR}")
 endif()
 
 execute_process(

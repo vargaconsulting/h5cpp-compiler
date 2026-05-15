@@ -169,7 +169,8 @@ jobs:
           echo "CXX=/usr/bin/clang++" >> "$GITHUB_ENV"
           echo "LLVM_DIR=${llvm_prefix}/lib/cmake/llvm" >> "$GITHUB_ENV"
           echo "Clang_DIR=${llvm_prefix}/lib/cmake/clang" >> "$GITHUB_ENV"
-          echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+          llvm_major=$("${llvm_prefix}/bin/llvm-config" --version | cut -d. -f1)
+          echo "LLVM_RESOURCE_DIR=${llvm_prefix}/lib/clang/${llvm_major}" >> "$GITHUB_ENV"
 
           /usr/bin/clang++ --version
           "${llvm_prefix}/bin/llvm-config" --version
@@ -198,7 +199,7 @@ jobs:
           "Clang_DIR=$llvm_prefix\lib\cmake\clang" >> $env:GITHUB_ENV
           "$llvm_prefix\bin" >> $env:GITHUB_PATH
 
-          & "$llvm_prefix\bin\llvm-config.exe" --version
+          & "$llvm_prefix\bin\clang.exe" --version
 
       - name: Configure (Linux / macOS)
         if: runner.os != 'Windows'
