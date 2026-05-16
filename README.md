@@ -4,6 +4,7 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17069343.svg)](https://doi.org/10.5281/zenodo.17069343)
 [![GitHub release](https://img.shields.io/github/v/release/vargalabs/h5cpp-compiler.svg)](https://github.com/vargalabs/h5cpp-compiler/releases)
+![Downloads](https://img.shields.io/github/downloads/vargalabs/h5cpp-compiler/total)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue)](https://vargalabs.github.io/h5cpp-compiler)
 
 # Source code transformation tool for HDF5 dataformat  H5CPP header only library
