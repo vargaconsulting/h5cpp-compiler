@@ -66,11 +66,117 @@ target_compile_definitions(h5cpp PRIVATE
   ${LLVM_DEFINITIONS}
 )
 
-# Link against modern LLVM/Clang targets
-target_link_libraries(h5cpp
-  PRIVATE
-    clangTooling
+# --- Static linking: explicit library lists ---
+
+set(_clang_libs
+  clangTooling
+  clangFormat
+  clangToolingInclusions
+  clangToolingCore
+  clangRewrite
+  clangFrontend
+  clangDriver
+  clangSerialization
+  clangSema
+  clangParse
+  clangAPINotes
+  clangEdit
+  clangAnalysis
+  clangASTMatchers
+  clangAST
+  clangSupport
+  clangLex
+  clangBasic
 )
+
+# Filtered LLVM static libs (exclude unused targets/components)
+set(_llvm_components
+  LLVMAggressiveInstCombine
+  LLVMAnalysis
+  LLVMAsmParser
+  LLVMBinaryFormat
+  LLVMBitReader
+  LLVMBitWriter
+  LLVMBitstreamReader
+  LLVMCodeGen
+  LLVMCodeGenTypes
+  LLVMCore
+  LLVMDebugInfoDWARF
+  LLVMDemangle
+  LLVMFrontendAtomic
+  LLVMFrontendOffloading
+  LLVMFrontendOpenMP
+  LLVMIRReader
+  LLVMInstCombine
+  LLVMInstrumentation
+  LLVMLinker
+  LLVMMC
+  LLVMMCParser
+  LLVMObject
+  LLVMOption
+  LLVMPasses
+  LLVMProfileData
+  LLVMRemarks
+  LLVMScalarOpts
+  LLVMSupport
+  LLVMTarget
+  LLVMWindowsDriver
+  LLVMTargetParser
+  LLVMTextAPI
+  LLVMTransformUtils
+  LLVMVectorize
+  LLVMX86AsmParser
+  LLVMX86CodeGen
+  LLVMX86Desc
+  LLVMX86Disassembler
+  LLVMX86Info
+  LLVMipo
+)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(_lib_ext ".a")
+  set(_llvm_lib_dir "${LLVM_LIBRARY_DIRS}")
+
+  set(_clang_static_libs "")
+  foreach(_lib IN LISTS _clang_libs)
+    set(_lib_path "${_llvm_lib_dir}/lib${_lib}${_lib_ext}")
+    if(EXISTS ${_lib_path})
+      list(APPEND _clang_static_libs ${_lib_path})
+    else()
+      message(FATAL_ERROR "Missing clang static library: ${_lib_path}")
+    endif()
+  endforeach()
+
+  set(_llvm_static_libs "")
+  foreach(_comp IN LISTS _llvm_components)
+    set(_lib_path "${_llvm_lib_dir}/lib${_comp}${_lib_ext}")
+    if(EXISTS ${_lib_path})
+      list(APPEND _llvm_static_libs ${_lib_path})
+    else()
+      message(WARNING "Missing LLVM static library: ${_lib_path}")
+    endif()
+  endforeach()
+
+  # zstd may only have a versioned .so without dev package
+  if(EXISTS "/usr/lib/x86_64-linux-gnu/libzstd.so.1")
+    set(ZSTD_LIBRARY "/usr/lib/x86_64-linux-gnu/libzstd.so.1")
+  elseif(EXISTS "/lib/x86_64-linux-gnu/libzstd.so.1")
+    set(ZSTD_LIBRARY "/lib/x86_64-linux-gnu/libzstd.so.1")
+  else()
+    set(ZSTD_LIBRARY "zstd")
+  endif()
+
+  target_link_libraries(h5cpp PRIVATE
+    ${_clang_static_libs}
+    -Wl,--start-group
+    ${_llvm_static_libs}
+    -Wl,--end-group
+    -lz ${ZSTD_LIBRARY} -lxml2 -lffi -ldl -lpthread -lm -lrt
+  )
+else()
+  # macOS / Windows: use CMake imported targets (may link dynamically)
+  target_link_libraries(h5cpp PRIVATE clangTooling)
+endif()
 
 # Install directives
 include(GNUInstallDirs)
