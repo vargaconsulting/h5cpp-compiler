@@ -371,6 +371,8 @@ jobs:
 
       - name: Test
         shell: bash
+        env:
+          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1:abort_on_error=1
         run: ctest --test-dir build --output-on-failure --no-tests=ignore
 
       - name: Record badge status
