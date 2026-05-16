@@ -66,74 +66,75 @@ target_compile_definitions(h5cpp PRIVATE
   ${LLVM_DEFINITIONS}
 )
 
-# --- Static linking: explicit library lists ---
+# Linking
+option(H5CPP_STATIC_LINK_LLVM "Static-link LLVM and Clang libraries (Linux only)" OFF)
 
-set(_clang_libs
-  clangTooling
-  clangFormat
-  clangToolingInclusions
-  clangToolingCore
-  clangRewrite
-  clangFrontend
-  clangDriver
-  clangSerialization
-  clangSema
-  clangParse
-  clangAPINotes
-  clangEdit
-  clangAnalysis
-  clangASTMatchers
-  clangAST
-  clangSupport
-  clangLex
-  clangBasic
-)
+if(H5CPP_STATIC_LINK_LLVM AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # Explicit static library lists
+  set(_clang_libs
+    clangTooling
+    clangFormat
+    clangToolingInclusions
+    clangToolingCore
+    clangRewrite
+    clangFrontend
+    clangDriver
+    clangSerialization
+    clangSema
+    clangParse
+    clangAPINotes
+    clangEdit
+    clangAnalysis
+    clangASTMatchers
+    clangAST
+    clangSupport
+    clangLex
+    clangBasic
+  )
 
-# Filtered LLVM static libs (exclude unused targets/components)
-set(_llvm_components
-  LLVMAggressiveInstCombine
-  LLVMAnalysis
-  LLVMAsmParser
-  LLVMBinaryFormat
-  LLVMBitReader
-  LLVMBitWriter
-  LLVMBitstreamReader
-  LLVMCodeGen
-  LLVMCodeGenTypes
-  LLVMCore
-  LLVMDebugInfoDWARF
-  LLVMDemangle
-  LLVMFrontendAtomic
-  LLVMFrontendOffloading
-  LLVMFrontendOpenMP
-  LLVMIRReader
-  LLVMInstCombine
-  LLVMInstrumentation
-  LLVMLinker
-  LLVMMC
-  LLVMMCParser
-  LLVMObject
-  LLVMOption
-  LLVMPasses
-  LLVMProfileData
-  LLVMRemarks
-  LLVMScalarOpts
-  LLVMSupport
-  LLVMTarget
-  LLVMWindowsDriver
-  LLVMTargetParser
-  LLVMTextAPI
-  LLVMTransformUtils
-  LLVMVectorize
-  LLVMX86AsmParser
-  LLVMX86CodeGen
-  LLVMX86Desc
-  LLVMX86Disassembler
-  LLVMX86Info
-  LLVMipo
-)
+  set(_llvm_components
+    LLVMAggressiveInstCombine
+    LLVMAnalysis
+    LLVMAsmParser
+    LLVMBinaryFormat
+    LLVMBitReader
+    LLVMBitWriter
+    LLVMBitstreamReader
+    LLVMCodeGen
+    LLVMCodeGenTypes
+    LLVMCore
+    LLVMDebugInfoDWARF
+    LLVMDemangle
+    LLVMFrontendAtomic
+    LLVMFrontendOffloading
+    LLVMFrontendOpenMP
+    LLVMIRReader
+    LLVMInstCombine
+    LLVMInstrumentation
+    LLVMLinker
+    LLVMMC
+    LLVMMCParser
+    LLVMObject
+    LLVMOption
+    LLVMPasses
+    LLVMProfileData
+    LLVMRemarks
+    LLVMScalarOpts
+    LLVMSupport
+    LLVMTarget
+    LLVMWindowsDriver
+    LLVMTargetParser
+    LLVMTextAPI
+    LLVMTransformUtils
+    LLVMVectorize
+    LLVMX86AsmParser
+    LLVMX86CodeGen
+    LLVMX86Desc
+    LLVMX86Disassembler
+    LLVMX86Info
+    LLVMipo
+  )
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(_lib_ext ".a")
   set(_llvm_lib_dir "${LLVM_LIBRARY_DIRS}")
 
@@ -174,7 +175,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     -lz ${ZSTD_LIBRARY} -lxml2 -lffi -ldl -lpthread -lm -lrt
   )
 else()
-  # macOS / Windows: use CMake imported targets (may link dynamically)
   target_link_libraries(h5cpp PRIVATE clangTooling)
 endif()
 

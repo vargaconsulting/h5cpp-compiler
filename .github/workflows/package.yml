@@ -105,7 +105,8 @@ jobs:
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_DIR="$LLVM_DIR" \
-            -DClang_DIR="$Clang_DIR"
+            -DClang_DIR="$Clang_DIR" \
+            -DH5CPP_STATIC_LINK_LLVM=ON
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
