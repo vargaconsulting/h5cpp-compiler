@@ -1,4 +1,3 @@
-
 [![CI](https://github.com/vargalabs/h5cpp-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/vargalabs/h5cpp-compiler/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/vargalabs/h5cpp-compiler/branch/release/graph/badge.svg)](https://app.codecov.io/gh/vargalabs/h5cpp-compiler/tree/release)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -6,9 +5,117 @@
 [![GitHub release](https://img.shields.io/github/v/release/vargalabs/h5cpp-compiler.svg)](https://github.com/vargalabs/h5cpp-compiler/releases)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue)](https://vargalabs.github.io/h5cpp-compiler)
 
-# Source code transformation tool for HDF5 dataformat  H5CPP header only library
+# h5cpp-compiler
 
-## Build Matrix
+> h5cpp-compiler keeps your HDF5 schemas in sync with your C++ structs — automatically, at build time, before silent corruption becomes a runtime bug.
+
+Schema drift is a data-corruption event waiting to happen. This compiler catches it at build time.
+
+## Do I need this?
+
+| Your situation | What to use |
+|---|---|
+| Simple POD structs, no nesting, no arrays | [h5cpp header-only](https://h5cpp.org) — manual registration works |
+| Nested structs, C-style arrays, namespaced types, `std::vector<T>` | **h5cpp-compiler** |
+
+## The problem
+
+You changed a field in your simulation struct. Recompiled. Ran the job for six hours. The output file looks fine — until you load it and the particle coordinates are in the temperature column.
+
+HDF5 compound types and C++ structs must match byte-for-byte. One padding change, one field reorder, one `int` → `double` swap, and you're writing garbage. The worst part? You usually don't know until post-processing, three days later, when you can't reproduce the run.
+
+## The solution
+
+h5cpp-compiler is a build-time correctness gate. It parses your translation unit, finds every POD struct referenced by `h5::write`, `h5::read`, `h5::create`, or `h5::append`, and emits HDF5 compound-type descriptors that match your C++ layout exactly.
+
+Change a struct → rebuild → the generated descriptor tracks the change immediately. No silent mismatches. No 3 AM debugging sessions.
+
+## 30-second demo
+
+```bash
+# 1. A struct marked with an h5:: operator
+cat > experiment.cpp << 'EOF'
+#include <h5cpp/all>
+struct Particle { double x, y, z; int id; };
+int main() {
+    auto fd = h5::create("run.h5");
+    std::vector<Particle> particles(100);
+    h5::write(fd, "particles", particles);
+}
+EOF
+
+# 2. Generate descriptors that match the struct exactly
+h5cpp experiment.cpp -- $(CXXFLAGS) -Dgenerated.h
+
+# 3. Someone refactors the struct — field moves, padding shifts
+cat > experiment.cpp << 'EOF'
+#include <h5cpp/all>
+struct Particle { double x, y; int id; double z; };  // z moved
+int main() {
+    auto fd = h5::open("run.h5");
+    std::vector<Particle> particles(100);
+    h5::write(fd, "particles", particles);
+}
+EOF
+
+# 4. Re-generate — descriptor now reflects the new layout
+h5cpp experiment.cpp -- $(CXXFLAGS) -Dgenerated.h
+# The generated descriptor matches your C++ struct exactly.
+# If it no longer matches the existing file, HDF5 errors out instead
+# of silently corrupting the dataset.
+```
+
+## Installation
+
+### Prerequisites
+
+- LLVM / Clang development libraries
+- CMake 3.14+
+- C++17 compiler
+
+### Build from source
+
+```bash
+# Ubuntu / Debian
+sudo apt install build-essential cmake llvm-dev libclang-dev
+
+# macOS
+brew install llvm cmake
+
+# Build and install
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build --parallel
+sudo cmake --install build
+```
+
+### Prebuilt binaries
+
+See [GitHub Releases](https://github.com/vargalabs/h5cpp-compiler/releases).
+
+## CMake integration
+
+```cmake
+find_package(h5cpp-compiler REQUIRED)
+
+h5cpp_compiler_generate(
+    INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/experiment.cpp
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/experiment_h5.hpp
+)
+
+target_sources(my_app PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/experiment_h5.hpp)
+```
+
+See `examples/cmake-integration/` for a complete working project.
+
+## Compatibility
+
+| h5cpp-compiler | h5cpp library |
+|---|---|
+| 1.10.4.6 | 1.10.4.x |
+
+Keep the compiler and library versions in sync.
+
+## Build matrix
 
 | OS / Compiler | GCC 13            | GCC 14            | GCC 15    | Clang 17         | Clang 18         | Clang 19         | Clang 20         | Apple Clang    | MSVC           |
 |---------------|-------------------|-------------------|-----------|------------------|------------------|------------------|------------------|----------------|----------------|
@@ -17,99 +124,13 @@
 | macOS 15      | ![NA][NA]         | ![NA][NA]         | ![NA][NA] | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![mac-ac][400] | ![NA][NA]      |
 | Windows       | ![NA][NA]         | ![NA][NA]         | ![NA][NA] | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![NA][NA]      | ![win-msvc][500] |
 
+## How it works
 
-This source code transformation tool simplifies the otherwise time consuming process of generating the shim code for HDF5 Compound datatypes by building the AST of a given TU translation unit, and identifying all POD datatypes referenced from H5CPP operators/functions.
-The result is a seamless persistence much similar to python, java or other reflection based languages. 
+h5cpp-compiler uses LLVM/Clang tooling to build the AST of your translation unit, locates struct types passed to h5:: I/O operators, and emits a self-contained header with HDF5 `H5T_COMPOUND` descriptors in topological order. The generated file uses `#pragma once` and drops straight into your build.
 
-The following excerpt shows the mechanism, how `vec` variable is marked by `h5::write` operator. When `h5cpp` tool is invoked it builds the full AST of the translation unit, finds the referenced types, then in topological order generates HDF5 COMPOUND datatype descriptors. The generated file has include guards, and meant to be used with [H5CPP template library](h5cpp.org). POD struct types may be arbitrary deep, embedded in POD C like arrays, and may be referenced from STL containers. Currently `stl::vector` is supported, but in time full support will be provided.
+## License
 
-## Installation
-```bash
-sudo apt install build-essential cmake
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build --parallel
-sudo cmake --install build
-```
-
-```cpp
-...
-std::vector<sn::example::Record> vec 
-    = h5::utils::get_test_data<sn::example::Record>(20);
-// mark vec  with an h5:: operator and delegate 
-// the details to h5cpp compiler
-h5::write(fd, "orm/partial/vector one_shot", vec );
-...
-
-// some include files with complex POD types, embedded in arbitrary name space
-namespace sn {
-	namespace typecheck {
-		struct Record { /*the types with direct mapping to HDF5*/
-			char  _char; unsigned char _uchar; short _short; unsigned short _ushort; int _int; unsigned int _uint;
-			long _long; unsigned long _ulong; long long int _llong; unsigned long long _ullong;
-			float _float; double _double; long double _ldouble;
-			bool _bool;
-			// wide characters are not supported in HDF5
-			// wchar_t _wchar; char16_t _wchar16; char32_t _wchar32;
-		};
-	}
-	namespace other {
-		struct Record {                    // POD struct with nested namespace
-			MyUInt                    idx; // typedef type 
-			MyUInt                     aa; // typedef type 
-			double            field_02[3]; // const array mapped 
-			typecheck::Record field_03[4]; //
-		};
-	}
-	namespace example {
-		struct Record {                    // POD struct with nested namespace
-			MyUInt                    idx; // typedef type 
-			float             field_02[7]; // const array mapped 
-			sn::other::Record field_03[5]; // embedded Record
-			sn::other::Record field_04[5]; // must be optimized out, same as previous
-			other::Record  field_05[3][8]; // array of arrays 
-		};
-	}
-	namespace not_supported_yet {
-		// NON POD: not supported in phase 1
-		// C++ Class -> PODstruct -> persistence[ HDF5 | ??? ] -> PODstruct -> C++ Class 
-		struct Container {
-			double                            idx; // 
-			std::string                  field_05; // c++ object makes it non-POD
-			std::vector<example::Record> field_02; // ditto
-		};
-	}
-	/* BEGIN IGNORED STRUCT */
-	// these structs are not referenced with h5::read|h5::write|h5::create operators
-	// hence compiler should ignore them.
-	struct IgnoredRecord {
-		signed long int   idx;
-		float        field_0n;
-	};
-	/* END IGNORED STRUCTS */
-```
-
-
-# Python virtual environment for this website
-
-## Setup
-
-```bash
-python3 -m venv .venv                 # Create a virtual env (Python 3.10+ recommended)
-source .venv/bin/activate             # Activate: Linux / macOS
-# On Windows use: .venv\Scripts\activate
-
-pip install --upgrade pip             # Upgrade pip
-pip install mkdocs-material           # Install MkDocs + Material theme
-pip install python-frontmatter jinja2 python-dateutil pyyaml  # Extra deps
-```
-
-## Run MkDocs locally
-
-```bash
-source .venv/bin/activate
-mkdocs serve --dev-addr=127.0.0.1:9000   # Live preview at http://127.0.0.1:9000
-mkdocs build -v                          # Build static site locally
-```
+MIT. See [LICENSE](LICENSE) and [LICENSE.LLVM](LICENSE.LLVM).
 
 <!-- Static NA badge — committed once to the repo, never regenerated by CI -->
 [NA]: https://vargalabs.github.io/h5cpp-compiler/badges/na.svg
