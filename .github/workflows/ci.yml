@@ -430,7 +430,7 @@ jobs:
           set -euxo pipefail
 
           llvm_cmakedir="$(llvm-config-18 --cmakedir)"
-          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang-18"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
 
           cmake -S . -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
