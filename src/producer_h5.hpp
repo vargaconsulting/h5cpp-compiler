@@ -11,7 +11,7 @@
 #include <set>
 
 
-std::string get_include_guard( size_t N ){
+inline std::string get_include_guard( size_t N ){
 	std::string str;
 	static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
 										"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
