@@ -299,10 +299,202 @@ jobs:
           name: status-${{ matrix.os }}-${{ matrix.compiler }}
           path: badge-status/status-${{ matrix.os }}-${{ matrix.compiler }}.json
 
+  asan:
+    name: asan / ubuntu-24.04 / clang-18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap apt and add LLVM repository
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-18 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          sudo apt-get update
+
+      - name: Install LLVM toolchain (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-18-dev
+            libclang-18-dev
+            clang-18
+            cmake
+            ninja-build
+          version: ubuntu-24.04-asan-v1
+
+      - name: Setup build environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          echo "CC=$(command -v clang-18)" >> "$GITHUB_ENV"
+          echo "CXX=$(command -v clang++-18)" >> "$GITHUB_ENV"
+          clang++-18 --version
+
+          llvm_cmakedir="$(llvm-config-18 --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+          echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DLLVM_DIR="$LLVM_DIR" \
+            -DClang_DIR="$Clang_DIR" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        run: ctest --test-dir build --output-on-failure --no-tests=ignore
+
+      - name: Record badge status
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p badge-status
+          cat <<EOF > "badge-status/status-asan.json"
+          {
+            "os": "ubuntu-24.04",
+            "compiler": "asan-clang-18",
+            "status": "${{ job.status }}"
+          }
+          EOF
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-asan
+          path: badge-status/status-asan.json
+
+  ubsan:
+    name: ubsan / ubuntu-24.04 / clang-18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap apt and add LLVM repository
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-18 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          sudo apt-get update
+
+      - name: Install LLVM toolchain (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-18-dev
+            libclang-18-dev
+            clang-18
+            cmake
+            ninja-build
+          version: ubuntu-24.04-ubsan-v1
+
+      - name: Setup build environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          echo "CC=$(command -v clang-18)" >> "$GITHUB_ENV"
+          echo "CXX=$(command -v clang++-18)" >> "$GITHUB_ENV"
+          clang++-18 --version
+
+          llvm_cmakedir="$(llvm-config-18 --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+          echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DLLVM_DIR="$LLVM_DIR" \
+            -DClang_DIR="$Clang_DIR" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
+            -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure --no-tests=ignore
+
+      - name: Record badge status
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p badge-status
+          cat <<EOF > "badge-status/status-ubsan.json"
+          {
+            "os": "ubuntu-24.04",
+            "compiler": "ubsan-clang-18",
+            "status": "${{ job.status }}"
+          }
+          EOF
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-ubsan
+          path: badge-status/status-ubsan.json
+
   badge:
     name: Generate SVG Badges
     if: always()
-    needs: build
+    needs: [build, asan, ubsan]
     runs-on: ubuntu-24.04
 
     steps:
