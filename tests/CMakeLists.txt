@@ -11,6 +11,9 @@ set(FIXTURES
   ignored-non-pod
   unreferenced
   topological
+  enum-member
+  multi-array
+  inheritance
 )
 
 function(add_h5cpp_fixture_test name)
