@@ -457,6 +457,7 @@ jobs:
           lcov \
             --gcov-tool /usr/bin/gcov-14 \
             --rc geninfo_unexecuted_blocks=1 \
+            --ignore-errors mismatch \
             --directory build \
             --capture \
             --output-file coverage.full.info
