@@ -33,6 +33,7 @@ using namespace clang::ast_matchers;
 
 #include "producer.hpp"
 #include "producer_h5.hpp"
+#include "producer_h5_legacy.hpp"
 #include "consumer.hpp"
 
 /// variables
@@ -70,6 +71,11 @@ StatementMatcher h5templateMatcher = callExpr( allOf(
 static llvm::cl::OptionCategory MyToolCategory("h5cpp options");
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
+static cl::opt<bool> LegacyMode("legacy-register-struct",
+    cl::desc("Emit legacy register_struct<T>() specializations instead of compiler_meta_t"),
+    cl::cat(MyToolCategory),
+    cl::init(false));
+
 static cl::opt<bool> CheckMode("check",
     cl::desc("Verify that the existing generated file is up to date (exit 1 if stale)"),
     cl::cat(MyToolCategory),
@@ -102,15 +108,17 @@ int main(int argc, const char **argv) {
 
 	int rc = 0;
 	{
-		H5TemplateCallback<H5Producer> callback( work_path );
-		MatchFinder Finder;
-		Finder.addMatcher(h5templateMatcher, &callback );
-		//Tool.setDiagnosticConsumer( new IgnoringDiagConsumer() );
-		//TODO: 
-		// in first pass h5::operators trip, as template specializations are not yet generated
-		// for now the entire diagnostic messages are disabled and error diagnostics left for final
-		// compile phase. 
-		rc = Tool.run( newFrontendActionFactory (&Finder).get());
+		if (LegacyMode) {
+			H5TemplateCallback<LegacyH5Producer> callback( work_path );
+			MatchFinder Finder;
+			Finder.addMatcher(h5templateMatcher, &callback );
+			rc = Tool.run( newFrontendActionFactory (&Finder).get());
+		} else {
+			H5TemplateCallback<H5Producer> callback( work_path );
+			MatchFinder Finder;
+			Finder.addMatcher(h5templateMatcher, &callback );
+			rc = Tool.run( newFrontendActionFactory (&Finder).get());
+		}
 	}
 
 	if (CheckMode && rc == 0) {

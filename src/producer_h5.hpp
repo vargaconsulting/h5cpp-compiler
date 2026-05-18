@@ -110,14 +110,11 @@ void H5Producer::file_begin_impl() {
 		" *       Requires h5cpp type engine v1 (issue #87).\n"
 		" *       NOT compatible with h5cpp versions prior to the #87 merge.\n"
 		" */\n";
-	// Using #pragma once for deterministic, diff-friendly output
-
-	
 	io << "#pragma once\n\n";
-
 	io << "#include <cstddef>\n";
 	io << "#include <cstdint>\n";
-	io << "#include <tuple>\n\n";
+	io << "#include <tuple>\n";
+	io << "#include <type_traits>\n\n";
 
 	io << "namespace h5::meta {\n\n";
 	emitted_records.clear();
