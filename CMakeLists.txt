@@ -77,6 +77,13 @@ include(GNUInstallDirs)
 install(TARGETS h5cpp DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES h5cpp.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
+# CMake helper modules for consumers
+install(
+    DIRECTORY cmake/
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/h5cpp-compiler
+    FILES_MATCHING PATTERN "*.cmake"
+)
+
 option(H5CPP_BUILD_TESTS "Build h5cpp-compiler fixture tests" ON)
 if(H5CPP_BUILD_TESTS)
   enable_testing()
