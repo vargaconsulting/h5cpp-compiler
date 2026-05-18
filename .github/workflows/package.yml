@@ -1,0 +1,293 @@
+name: Package
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: ${{ matrix.os }} / ${{ matrix.format }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            format: DEB
+            generators: DEB
+            deb_arch: amd64
+            rpm_arch: x86_64
+            asset_suffix: Linux-amd64
+          - os: ubuntu-24.04
+            format: RPM
+            generators: RPM
+            deb_arch: amd64
+            rpm_arch: x86_64
+            asset_suffix: Linux-x86_64
+          - os: ubuntu-24.04-arm
+            format: DEB
+            generators: DEB
+            deb_arch: arm64
+            rpm_arch: aarch64
+            asset_suffix: Linux-arm64
+          - os: ubuntu-24.04-arm
+            format: RPM
+            generators: RPM
+            deb_arch: arm64
+            rpm_arch: aarch64
+            asset_suffix: Linux-aarch64
+          - os: windows-latest
+            format: NSIS
+            generators: NSIS
+            asset_suffix: win64
+          - os: macos-15
+            format: productbuild
+            generators: productbuild
+            asset_suffix: Darwin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version from tag
+        shell: bash
+        run: |
+          ref="${GITHUB_REF_NAME}"
+          echo "H5CPP_VERSION=${ref#v}" >> "$GITHUB_ENV"
+
+      - name: Install LLVM toolchain (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          apt_opts=(
+            -o Acquire::Retries=5
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+            -o Acquire::ForceIPv4=true
+          )
+          apt_update() {
+            sudo apt-get "${apt_opts[@]}" update
+          }
+          apt_install() {
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get "${apt_opts[@]}" install -y --no-install-recommends "$@"
+          }
+
+          apt_update
+          apt_install wget gnupg lsb-release ca-certificates
+
+          codename=$(lsb_release -cs)
+          llvm_version="20"
+
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb [signed-by=/etc/apt/trusted.gpg.d/llvm-snapshot.gpg] https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${llvm_version} main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-${llvm_version}.list
+          apt_update
+          apt_install \
+            llvm-${llvm_version}-dev \
+            libclang-${llvm_version}-dev \
+            clang-${llvm_version} \
+            cmake \
+            ninja-build \
+            rpm \
+            libzstd-dev
+
+          llvm_cmakedir="$(llvm-config-${llvm_version} --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+          echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
+
+      - name: Install LLVM toolchain (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install --quiet cmake ninja llvm@20
+          llvm_prefix="$(brew --prefix llvm@20)"
+          echo "CC=/usr/bin/clang" >> "$GITHUB_ENV"
+          echo "CXX=/usr/bin/clang++" >> "$GITHUB_ENV"
+          echo "LLVM_DIR=${llvm_prefix}/lib/cmake/llvm" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${llvm_prefix}/lib/cmake/clang" >> "$GITHUB_ENV"
+
+      - name: Install LLVM toolchain (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ver = "19.1.7"
+          $archive = "clang+llvm-${ver}-x86_64-pc-windows-msvc.tar.xz"
+          $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-${ver}/${archive}"
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          tar -xf $archive
+          $src = (Get-ChildItem -Directory "clang+llvm-*")[0].FullName
+          New-Item -ItemType Directory -Force "C:\Program Files\LLVM" | Out-Null
+          Copy-Item "$src\*" "C:\Program Files\LLVM\" -Recurse -Force
+          choco install ninja -y --no-progress
+          choco install nsis -y --no-progress
+
+          $llvm_prefix = "C:\Program Files\LLVM"
+          "LLVM_DIR=$llvm_prefix\lib\cmake\llvm" >> $env:GITHUB_ENV
+          "Clang_DIR=$llvm_prefix\lib\cmake\clang" >> $env:GITHUB_ENV
+          "$llvm_prefix\bin" >> $env:GITHUB_PATH
+
+      - name: Patch LLVM cmake for DIA SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # LLVM 18.1.8 was built with VS 2019; its cmake exports hardcode the VS 2019 DIA SDK path.
+          # This step runs every time (not gated on cache) and rewrites that path to wherever
+          # diaguids.lib actually lives on this runner.
+          $old_path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK/lib/amd64/diaguids.lib"
+
+          $dia_file = Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Filter "diaguids.lib" `
+                        -Recurse -ErrorAction SilentlyContinue |
+                        Where-Object { $_.FullName -like "*amd64*" } |
+                        Select-Object -First 1
+
+          if (-not $dia_file) {
+            Write-Warning "diaguids.lib not found — linker may fail for PDB targets"
+            exit 0
+          }
+
+          $actual = $dia_file.FullName -replace '\\', '/'
+          Write-Host "diaguids.lib found at: $actual"
+
+          $patched = 0
+          Get-ChildItem "C:\Program Files\LLVM\lib\cmake" -Filter "*.cmake" -Recurse |
+          ForEach-Object {
+            $text = [System.IO.File]::ReadAllText($_.FullName)
+            if ($text.Contains($old_path)) {
+              Write-Host "Patching $($_.Name)"
+              $text = $text.Replace($old_path, $actual)
+              [System.IO.File]::WriteAllText($_.FullName, $text)
+              $patched++
+            }
+          }
+          Write-Host "Patched $patched cmake file(s)"
+
+      - name: Configure (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_DIR="$LLVM_DIR" \
+            -DClang_DIR="$Clang_DIR" \
+            -DH5CPP_STATIC_LINK_LLVM=ON \
+            -DH5CPP_VERSION_OVERRIDE="${H5CPP_VERSION:-}"
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DLLVM_DIR="$env:LLVM_DIR" `
+            -DClang_DIR="$env:Clang_DIR" `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
+            -DH5CPP_VERSION_OVERRIDE="$env:H5CPP_VERSION"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel --config Release
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd build
+          cpack -G "${{ matrix.generators }}" \
+            -D "CPACK_PACKAGE_FILE_NAME=h5cpp-compiler-${H5CPP_VERSION}-${{ matrix.asset_suffix }}" \
+            --config CPackConfig.cmake
+        env:
+          CPACK_DEBIAN_PACKAGE_ARCHITECTURE: ${{ matrix.deb_arch }}
+          CPACK_RPM_PACKAGE_ARCHITECTURE: ${{ matrix.rpm_arch }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: h5cpp-compiler-${{ matrix.os }}-${{ matrix.format }}
+          if-no-files-found: error
+          path: |
+            build/h5cpp-compiler-*.deb
+            build/h5cpp-compiler-*.rpm
+            build/h5cpp-compiler-*.exe
+            build/h5cpp-compiler-*.pkg
+
+  publish:
+    name: Publish Release
+    needs: package
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: h5cpp-compiler-*
+
+      - name: Create Release and upload assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+
+          # Ensure release exists. Idempotent: create only if missing,
+          # so a re-run of the workflow against the same tag does not 422.
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "h5cpp-compiler-${tag}" \
+              --generate-notes
+          fi
+
+          # Collect installer artifacts only. Defensive against stray
+          # CMake-generated files (e.g. h5cpp-compiler-dev.sln on Windows).
+          shopt -s globstar nullglob
+          files=( artifacts/**/*.deb artifacts/**/*.rpm artifacts/**/*.exe artifacts/**/*.pkg )
+          if (( ${#files[@]} == 0 )); then
+            echo "no installer artifacts found under artifacts/" >&2
+            exit 1
+          fi
+
+          # Upload each file with bounded retries. uploads.github.com is
+          # eventually consistent right after release creation and
+          # occasionally 404s on first POST.
+          failed=()
+          for f in "${files[@]}"; do
+            [[ -f "$f" ]] || continue
+            echo "::group::upload $(basename "$f")"
+            ok=0
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$tag" "$f" --clobber; then
+                ok=1
+                break
+              fi
+              backoff=$(( attempt * attempt * 2 ))
+              echo "attempt ${attempt} failed; retrying in ${backoff}s"
+              sleep "${backoff}"
+            done
+            echo "::endgroup::"
+            (( ok == 1 )) || failed+=( "$f" )
+          done
+
+          if (( ${#failed[@]} > 0 )); then
+            echo "Upload failed for:" >&2
+            printf '  - %s\n' "${failed[@]}" >&2
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
