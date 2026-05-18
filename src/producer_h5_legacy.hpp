@@ -9,21 +9,6 @@
 #include <iomanip>
 #include <random>
 
-inline std::string get_include_guard_legacy( size_t N ){
-	std::string str;
-	static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
-										"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	std::random_device rd;
-	std::default_random_engine rng(rd());
-	std::uniform_int_distribution<> dist(0,sizeof(alphabet)/sizeof(*alphabet)-2);
-
-	std::generate_n(std::back_inserter(str), N, [&]() {
-									return alphabet[dist(rng)];
-								});
-	return str;
-}
-
-
 struct LegacyH5Producer : Producer<LegacyH5Producer> {
 
 	void file_begin_impl();
@@ -51,13 +36,11 @@ void LegacyH5Producer::file_begin_impl(){
 		"/* Copyright (c) 2018 vargaconsulting, Toronto,ON Canada\n"
 		" *     Author: Varga, Steven <steven@vargaconsulting.ca>\n"
  		" */\n";
-	std::string include_guard = "H5CPP_GUARD_" + get_include_guard_legacy(5);
-
-	io << "#ifndef " << include_guard << std::endl;
-	io << "#define " << include_guard << std::endl << std::endl;
+	io << "#pragma once" << std::endl << std::endl;
+	io << "#include <hdf5.h>" << std::endl << std::endl;
 }
 void LegacyH5Producer::file_end_impl(){
-	io << "#endif\n"; //close `include guard`
+	io << "\n";
 }
 void LegacyH5Producer::template_decl_impl(const std::string& record){
 	record_name = record;

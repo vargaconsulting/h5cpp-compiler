@@ -11,20 +11,6 @@
 #include <set>
 
 
-inline std::string get_include_guard( size_t N ){
-	std::string str;
-	static const char alphabet[] = "abcdefghijklmnopqrstuvwxyz"
-										"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	std::random_device rd;
-	std::default_random_engine rng(rd());
-	std::uniform_int_distribution<> dist(0,sizeof(alphabet)/sizeof(*alphabet)-2);
-
-	std::generate_n(std::back_inserter(str), N, [&]() {
-								return alphabet[dist(rng)];
-							});
-	return str;
-}
-
 
 struct H5Producer : Producer<H5Producer> {
 
@@ -125,14 +111,11 @@ void H5Producer::file_begin_impl() {
 		" *       Requires h5cpp type engine v1 (issue #87).\n"
 		" *       NOT compatible with h5cpp versions prior to the #87 merge.\n"
 		" */\n";
-	std::string include_guard = "H5CPP_GUARD_" + get_include_guard(5);
-
-	io << "#ifndef " << include_guard << "\n";
-	io << "#define " << include_guard << "\n\n";
-
+	io << "#pragma once\n\n";
 	io << "#include <cstddef>\n";
 	io << "#include <cstdint>\n";
-	io << "#include <tuple>\n\n";
+	io << "#include <tuple>\n";
+	io << "#include <type_traits>\n\n";
 
 	io << "namespace h5::meta {\n\n";
 	emitted_records.clear();
@@ -140,7 +123,6 @@ void H5Producer::file_begin_impl() {
 
 void H5Producer::file_end_impl() {
 	io << "} // namespace h5::meta\n";
-	io << "#endif\n";
 }
 
 // ---------------------------------------------------------------------------
