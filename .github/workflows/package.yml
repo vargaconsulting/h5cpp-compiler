@@ -19,9 +19,23 @@ jobs:
           - os: ubuntu-24.04
             format: DEB
             generators: DEB
+            deb_arch: amd64
+            rpm_arch: x86_64
           - os: ubuntu-24.04
             format: RPM
             generators: RPM
+            deb_arch: amd64
+            rpm_arch: x86_64
+          - os: ubuntu-24.04-arm
+            format: DEB
+            generators: DEB
+            deb_arch: arm64
+            rpm_arch: aarch64
+          - os: ubuntu-24.04-arm
+            format: RPM
+            generators: RPM
+            deb_arch: arm64
+            rpm_arch: aarch64
           - os: windows-latest
             format: NSIS
             generators: NSIS
@@ -129,6 +143,9 @@ jobs:
           set -euxo pipefail
           cd build
           cpack -G "${{ matrix.generators }}" --config CPackConfig.cmake
+        env:
+          CPACK_DEBIAN_PACKAGE_ARCHITECTURE: ${{ matrix.deb_arch }}
+          CPACK_RPM_PACKAGE_ARCHITECTURE: ${{ matrix.rpm_arch }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
