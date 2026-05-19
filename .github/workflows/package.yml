@@ -49,6 +49,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Resolve version from tag
+        shell: bash
+        run: |
+          ref="${GITHUB_REF_NAME}"
+          echo "H5CPP_VERSION=${ref#v}" >> "$GITHUB_ENV"
+
       - name: Install LLVM toolchain (Linux)
         if: runner.os == 'Linux'
         shell: bash
@@ -156,7 +162,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_DIR="$LLVM_DIR" \
             -DClang_DIR="$Clang_DIR" \
-            -DH5CPP_STATIC_LINK_LLVM=ON
+            -DH5CPP_STATIC_LINK_LLVM=ON \
+            -DH5CPP_VERSION_OVERRIDE="${H5CPP_VERSION:-}"
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
@@ -167,7 +174,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DLLVM_DIR="$env:LLVM_DIR" `
             -DClang_DIR="$env:Clang_DIR" `
-            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded `
+            -DH5CPP_VERSION_OVERRIDE="$env:H5CPP_VERSION"
 
       - name: Build
         shell: bash
@@ -187,7 +195,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: h5cpp-compiler-${{ matrix.os }}-${{ matrix.format }}
-          path: build/h5cpp-compiler-*
+          if-no-files-found: error
+          path: |
+            build/h5cpp-compiler-*.deb
+            build/h5cpp-compiler-*.rpm
+            build/h5cpp-compiler-*.exe
+            build/h5cpp-compiler-*.pkg
 
   publish:
     name: Publish Release
@@ -208,10 +221,51 @@ jobs:
       - name: Create Release and upload assets
         shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-          gh release create "$tag" --generate-notes || true
-          find artifacts -type f -name "h5cpp-compiler-*" -print0 | \
-            xargs -0 gh release upload "$tag" --clobber
+
+          # Ensure release exists. Idempotent: create only if missing,
+          # so a re-run of the workflow against the same tag does not 422.
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" \
+              --title "h5cpp-compiler-${tag}" \
+              --generate-notes
+          fi
+
+          # Collect installer artifacts only. Defensive against stray
+          # CMake-generated files (e.g. h5cpp-compiler-dev.sln on Windows).
+          shopt -s globstar nullglob
+          files=( artifacts/**/*.deb artifacts/**/*.rpm artifacts/**/*.exe artifacts/**/*.pkg )
+          if (( ${#files[@]} == 0 )); then
+            echo "no installer artifacts found under artifacts/" >&2
+            exit 1
+          fi
+
+          # Upload each file with bounded retries. uploads.github.com is
+          # eventually consistent right after release creation and
+          # occasionally 404s on first POST.
+          failed=()
+          for f in "${files[@]}"; do
+            [[ -f "$f" ]] || continue
+            echo "::group::upload $(basename "$f")"
+            ok=0
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$tag" "$f" --clobber; then
+                ok=1
+                break
+              fi
+              backoff=$(( attempt * attempt * 2 ))
+              echo "attempt ${attempt} failed; retrying in ${backoff}s"
+              sleep "${backoff}"
+            done
+            echo "::endgroup::"
+            (( ok == 1 )) || failed+=( "$f" )
+          done
+
+          if (( ${#failed[@]} > 0 )); then
+            echo "Upload failed for:" >&2
+            printf '  - %s\n' "${failed[@]}" >&2
+            exit 1
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
