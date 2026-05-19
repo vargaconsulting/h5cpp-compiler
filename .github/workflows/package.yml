@@ -60,18 +60,32 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          apt_opts=(
+            -o Acquire::Retries=5
+            -o Acquire::http::Timeout=30
+            -o Acquire::https::Timeout=30
+            -o Acquire::ForceIPv4=true
+          )
+          apt_update() {
+            sudo apt-get "${apt_opts[@]}" update
+          }
+          apt_install() {
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get "${apt_opts[@]}" install -y --no-install-recommends "$@"
+          }
+
+          apt_update
+          apt_install wget gnupg lsb-release ca-certificates
 
           codename=$(lsb_release -cs)
           llvm_version="20"
 
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
-            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
-          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${llvm_version} main" \
+            | sudo gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb [signed-by=/etc/apt/trusted.gpg.d/llvm-snapshot.gpg] https://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${llvm_version} main" \
             | sudo tee /etc/apt/sources.list.d/llvm-${llvm_version}.list
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt_update
+          apt_install \
             llvm-${llvm_version}-dev \
             libclang-${llvm_version}-dev \
             clang-${llvm_version} \
