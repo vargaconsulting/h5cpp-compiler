@@ -21,27 +21,33 @@ jobs:
             generators: DEB
             deb_arch: amd64
             rpm_arch: x86_64
+            asset_suffix: Linux-amd64
           - os: ubuntu-24.04
             format: RPM
             generators: RPM
             deb_arch: amd64
             rpm_arch: x86_64
+            asset_suffix: Linux-x86_64
           - os: ubuntu-24.04-arm
             format: DEB
             generators: DEB
             deb_arch: arm64
             rpm_arch: aarch64
+            asset_suffix: Linux-arm64
           - os: ubuntu-24.04-arm
             format: RPM
             generators: RPM
             deb_arch: arm64
             rpm_arch: aarch64
+            asset_suffix: Linux-aarch64
           - os: windows-latest
             format: NSIS
             generators: NSIS
+            asset_suffix: win64
           - os: macos-15
             format: productbuild
             generators: productbuild
+            asset_suffix: Darwin
 
     steps:
       - name: Checkout
@@ -200,7 +206,9 @@ jobs:
         run: |
           set -euxo pipefail
           cd build
-          cpack -G "${{ matrix.generators }}" --config CPackConfig.cmake
+          cpack -G "${{ matrix.generators }}" \
+            -D "CPACK_PACKAGE_FILE_NAME=h5cpp-compiler-${H5CPP_VERSION}-${{ matrix.asset_suffix }}" \
+            --config CPackConfig.cmake
         env:
           CPACK_DEBIAN_PACKAGE_ARCHITECTURE: ${{ matrix.deb_arch }}
           CPACK_RPM_PACKAGE_ARCHITECTURE: ${{ matrix.rpm_arch }}
