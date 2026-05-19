@@ -19,6 +19,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
 
+#include <cstdio>
 #include <set>
 #include <stack>
 #include <algorithm>
@@ -32,6 +33,7 @@ using namespace clang::ast_matchers;
 
 #include "producer.hpp"
 #include "producer_h5.hpp"
+#include "producer_h5_legacy.hpp"
 #include "consumer.hpp"
 
 /// variables
@@ -53,11 +55,11 @@ StatementMatcher h5templateMatcher = callExpr( allOf(
 				hasDeclaration( classTemplateSpecializationDecl(
 					hasTemplateArgument(0,  refersToType( qualType( eachOf(
 					// T:=std::container<some_struct>
-					hasDeclaration(	cxxRecordDecl(isStruct()).bind("cxxRecordDecl")),
+					hasDeclaration( cxxRecordDecl(isStruct()).bind("cxxRecordDecl")),
 					// T:=std::vector<std::vector<some_struct>>   rugged array of structs
 					hasDeclaration( classTemplateSpecializationDecl(
 						hasTemplateArgument(0,  refersToType( qualType( 
-						hasDeclaration(	cxxRecordDecl(isStruct()).bind("cxxRecordDecl"))))))
+						hasDeclaration( cxxRecordDecl(isStruct()).bind("cxxRecordDecl"))))))
 					)
 					))/*.bind("TemplateArg")*/ ))/*End templSpecDecl */ ) ),
 				hasDeclaration( cxxRecordDecl( isClass()  ).bind("classDecl")) )
@@ -69,6 +71,16 @@ StatementMatcher h5templateMatcher = callExpr( allOf(
 static llvm::cl::OptionCategory MyToolCategory("h5cpp options");
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
+static cl::opt<bool> LegacyMode("legacy-register-struct",
+    cl::desc("Emit legacy register_struct<T>() specializations instead of compiler_meta_t"),
+    cl::cat(MyToolCategory),
+    cl::init(false));
+
+static cl::opt<bool> CheckMode("check",
+    cl::desc("Verify that the existing generated file is up to date (exit 1 if stale)"),
+    cl::cat(MyToolCategory),
+    cl::init(false));
+
 /* the actual program */
 int main(int argc, const char **argv) {
 	//FIXME: last argument is the generated file, this could be improved upon
@@ -78,7 +90,7 @@ int main(int argc, const char **argv) {
 
 	std::cerr <<
 		"H5CPP: Copyright (c) 2018-2020, VargaConsulting, Toronto,ON Canada\n"
-	   	"LLVM : Copyright (c) 2003-2010, University of Illinois at Urbana-Champaign.\n"
+   	 	"LLVM : Copyright (c) 2003-2010, University of Illinois at Urbana-Champaign.\n"
 	;
 	auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
 	if (!ExpectedParser) {
@@ -88,14 +100,45 @@ int main(int argc, const char **argv) {
 	CommonOptionsParser &OptionsParser = ExpectedParser.get();
 	ClangTool Tool(OptionsParser.getCompilations(),
 				 OptionsParser.getSourcePathList());
-	H5TemplateCallback<H5Producer> callback( path );
-	MatchFinder Finder;
-	Finder.addMatcher(h5templateMatcher, &callback );
-	//Tool.setDiagnosticConsumer( new IgnoringDiagConsumer() );
-	//TODO: 
-	// in first pass h5::operators trip, as template specializations are not yet generated
-	// for now the entire diagnostic messages are disabled and error diagnostics left for final
-	// compile phase. 
-	return  Tool.run( newFrontendActionFactory (&Finder).get());
-}
 
+	std::string work_path = path;
+	if (CheckMode) {
+		work_path = path + ".h5cpp-check";
+	}
+
+	int rc = 0;
+	{
+		if (LegacyMode) {
+			H5TemplateCallback<LegacyH5Producer> callback( work_path );
+			MatchFinder Finder;
+			Finder.addMatcher(h5templateMatcher, &callback );
+			rc = Tool.run( newFrontendActionFactory (&Finder).get());
+		} else {
+			H5TemplateCallback<H5Producer> callback( work_path );
+			MatchFinder Finder;
+			Finder.addMatcher(h5templateMatcher, &callback );
+			rc = Tool.run( newFrontendActionFactory (&Finder).get());
+		}
+	}
+
+	if (CheckMode && rc == 0) {
+		std::ifstream generated(work_path);
+		std::ifstream existing(path);
+		bool same = false;
+		if (generated && existing) {
+			std::string g((std::istreambuf_iterator<char>(generated)),
+			              std::istreambuf_iterator<char>());
+			std::string e((std::istreambuf_iterator<char>(existing)),
+			              std::istreambuf_iterator<char>());
+			same = (g == e);
+		}
+		std::remove(work_path.c_str());
+		if (!same) {
+			llvm::errs() << "h5cpp-compiler --check: generated file is out of date: "
+			             << path << "\n";
+			return 1;
+		}
+	}
+
+	return rc;
+}

@@ -5,224 +5,675 @@ on:
     branches: [ release, staging ]
   pull_request:
     branches: [ release, staging ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: ${{ matrix.os }} / ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
-        # , macos-13, macos-14, windows-latest
-        os: [ubuntu-22.04, ubuntu-24.04, macos-latest, windows-latest]
-        compiler: [gcc-13, gcc-14, gcc-15, clang-14, clang-15, clang-17]
         include:
-          - compiler: gcc-13
+          - os: ubuntu-22.04
+            compiler: gcc-13
             compiler-version: 13
-          - compiler: gcc-14
-            compiler-version: 14
-          - compiler: gcc-15
-            compiler-version: 15
-          - compiler: clang-14
-            compiler-version: 14
-          - compiler: clang-15
-            compiler-version: 15
-          - compiler: clang-17
+            llvm-version: 18
+          - os: ubuntu-22.04
+            compiler: clang-17
             compiler-version: 17
+            llvm-version: 17
+          - os: ubuntu-22.04
+            compiler: clang-18
+            compiler-version: 18
+            llvm-version: 18
+          - os: ubuntu-22.04
+            compiler: clang-19
+            compiler-version: 19
+            llvm-version: 19
+          - os: ubuntu-22.04
+            compiler: clang-20
+            compiler-version: 20
+            llvm-version: 20
+          - os: ubuntu-24.04
+            compiler: gcc-13
+            compiler-version: 13
+            llvm-version: 18
+          - os: ubuntu-24.04
+            compiler: gcc-14
+            compiler-version: 14
+            llvm-version: 18
+          - os: ubuntu-24.04
+            compiler: clang-18
+            compiler-version: 18
+            llvm-version: 18
+          - os: ubuntu-24.04
+            compiler: clang-19
+            compiler-version: 19
+            llvm-version: 19
+          - os: ubuntu-24.04
+            compiler: clang-20
+            compiler-version: 20
+            llvm-version: 20
+          - os: macos-15
+            compiler: apple-clang
+            compiler-version: native
+            llvm-version: 18
+          - os: windows-latest
+            compiler: msvc
+            compiler-version: native
+            llvm-version: 19
+            llvm-patch-version: 19.1.7
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-    - name: Set badge output directory
-      id: path
-      shell: bash
-      run: |
-        if [[ "${GITHUB_REF##*/}" == "staging" ]]; then
-          echo "dir=status-staging" >> $GITHUB_OUTPUT
-        else
-          echo "dir=status" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Check skip list
-      id: skip_check
-      shell: bash
-      run: |
-        skip_list=(
-          "ubuntu-22.04:gcc-13"     "ubuntu-22.04:gcc-14"     "ubuntu-22.04:gcc-15"
-          "ubuntu-22.04:clang-14"   "ubuntu-22.04:clang-15"   "ubuntu-22.04:clang-17"
-          "ubuntu-24.04:gcc-13"     "ubuntu-24.04:gcc-14"     "ubuntu-24.04:gcc-15"
-          "ubuntu-24.04:clang-14"   "ubuntu-24.04:clang-15"
-          "macos-latest:gcc-13"     "macos-latest:gcc-14"     "macos-latest:gcc-15"
-          "macos-latest:clang-14"   "macos-latest:clang-15"   "macos-latest:clang-17"          
-          "windows-latest:gcc-13"   "windows-latest:gcc-14"   "windows-latest:gcc-15"
-          "windows-latest:clang-14" "windows-latest:clang-15" "windows-latest:clang-17"
-        )
-
-        combo="${{ matrix.os }}:${{ matrix.compiler }}"
-        echo "Checking combination: $combo"
-        for skip in "${skip_list[@]}"; do
-          if [[ "$combo" == "$skip" ]]; then
-            echo "SKIP_COMPILE=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
-        done
-        echo "SKIP_COMPILE=false" >> "$GITHUB_ENV"
-
-    # Linux compiler setup
-    - name: Setup compiler on Linux
-      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Linux' }}
-      run: |
-        compiler="${{ matrix.compiler }}"
-        version="${{ matrix.compiler-version }}"
-
-        if [[ "$compiler" == clang-* ]]; then
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release software-properties-common
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo DISTRIB_CODENAME=jammy ./llvm.sh "$version" all
-          CXX="clang++-$version"
-        elif [[ "$compiler" == gcc-* ]]; then
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt-get update
-          sudo apt-get install -y g++-"$version"
-          CXX="g++-$version"
-        else
-          CXX="g++"
-        fi
-
-        which "$CXX" || { echo "$CXX not found in PATH"; exit 1; }
-        echo "CXX=$(which $CXX)" >> "$GITHUB_ENV"
-
-    # macOS compiler setup
-    - name: Setup compiler on macOS
-      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'macOS' }}
-      run: |
-        brew install llvm@${{ matrix.compiler-version }}
-        echo "CC=$(brew --prefix llvm@${{ matrix.compiler-version }})/bin/clang" >> $GITHUB_ENV
-        echo "CXX=$(brew --prefix llvm@${{ matrix.compiler-version }})/bin/clang++" >> $GITHUB_ENV
-
-    # Windows compiler setup
-    - name: Setup compiler on Windows
-      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Windows' }}
-      shell: pwsh
-      run: |
-        $version = "${{ matrix.compiler-version }}"
-        choco install llvm --version=$version -y
-        echo "CXX=clang++" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-
-    # --- Install HDF5 on all OSes ---
-    - name: Install HDF5 on Linux
-      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Linux' }}
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libhdf5-dev
-
-    - name: Install HDF5 on macOS
-      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'macOS' }}
-      run: |
-        brew install hdf5
-
-    - name: Install HDF5 on Windows
-      if: ${{ env.SKIP_COMPILE == 'false' && runner.os == 'Windows' }}
-      shell: pwsh
-      run: |
-        choco install hdf5 -y
-
-    # --- Build/Test ---
-    - name: Configure
-      if: env.SKIP_COMPILE == 'false'
-      run: cmake -B build -DCMAKE_CXX_COMPILER=$CXX -DCMAKE_CXX_STANDARD=23 -DCMAKE_BUILD_TYPE=Release
-
-    - name: Build
-      if: env.SKIP_COMPILE == 'false'
-      run: cmake --build build --parallel
-
-    - name: Test
-      if: env.SKIP_COMPILE == 'false'
-      run: ctest --test-dir build --output-on-failure
-
-    - name: Record Badge Status
-      if: always()
-      shell: bash
-      run: |
-        mkdir -p badge-status
-        status="skipped"
-        if [[ "$SKIP_COMPILE" == "false" ]]; then
-          status="${{ job.status }}"
-        fi
-
-        cat <<EOF > badge-status/status-${{ matrix.os }}-${{ matrix.compiler }}.json
-        {
-          "os": "${{ matrix.os }}",
-          "compiler": "${{ matrix.compiler }}",
-          "status": "$status"
-        }
-        EOF
-    - name: Upload Status Artifact
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: status-${{ matrix.os }}-${{ matrix.compiler }}
-        path: badge-status/status-${{ matrix.os }}-${{ matrix.compiler }}.json
-
-  generate-badges:
-    name: Generate SVG Badges
-    runs-on: ubuntu-latest
-    needs: build
-    if: always()
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Determine badge target directory
-        id: badge_dir
+      - name: Bootstrap apt and add LLVM repository (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
         run: |
-          if [[ "${GITHUB_REF##*/}" == "staging" ]]; then
-            echo "dir=badges-staging" >> $GITHUB_OUTPUT
-          else
-            echo "dir=badges" >> $GITHUB_OUTPUT
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+          llvm_version="${{ matrix.llvm-version }}"
+
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-${llvm_version} main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-${llvm_version}.list
+          sudo apt-get update
+
+      - name: Install LLVM toolchain (Linux, cached)
+        if: runner.os == 'Linux'
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-${{ matrix.llvm-version }}-dev
+            libclang-${{ matrix.llvm-version }}-dev
+            clang-${{ matrix.llvm-version }}
+            cmake
+            ninja-build
+          version: ${{ matrix.os }}-llvm-${{ matrix.llvm-version }}-v1
+
+      - name: Setup build compiler (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          compiler="${{ matrix.compiler }}"
+          version="${{ matrix.compiler-version }}"
+          llvm_version="${{ matrix.llvm-version }}"
+
+          if [[ "$compiler" == clang-* ]]; then
+            echo "CC=$(command -v clang-${version})" >> "$GITHUB_ENV"
+            echo "CXX=$(command -v clang++-${version})" >> "$GITHUB_ENV"
+            clang++-"${version}" --version
+
+          elif [[ "$compiler" == gcc-* ]]; then
+            if ! command -v "gcc-${version}" >/dev/null; then
+              sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+              sudo apt-get update
+              sudo apt-get install -y "gcc-${version}" "g++-${version}"
+            fi
+            echo "CC=$(command -v gcc-${version})" >> "$GITHUB_ENV"
+            echo "CXX=$(command -v g++-${version})" >> "$GITHUB_ENV"
+            g++-"${version}" --version
           fi
 
-      - name: Download all badge status artifacts
-        uses: actions/download-artifact@v4
+          llvm_cmakedir="$(llvm-config-${llvm_version} --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+          echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
+
+      - name: Cache LLVM toolchain (macOS)
+        if: runner.os == 'macOS'
+        id: cache-llvm-macos
+        uses: actions/cache@v4
+        with:
+          path: |
+            /opt/homebrew/opt/llvm@${{ matrix.llvm-version }}
+            /opt/homebrew/Cellar/llvm@${{ matrix.llvm-version }}
+          key: macos-llvm-${{ matrix.llvm-version }}-v1
+
+      - name: Install LLVM toolchain (macOS)
+        if: runner.os == 'macOS' && steps.cache-llvm-macos.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          brew update
+          brew install --quiet cmake ninja "llvm@${{ matrix.llvm-version }}"
+
+      - name: Export macOS environment
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          llvm_prefix="$(brew --prefix llvm@${{ matrix.llvm-version }})"
+          echo "CC=/usr/bin/clang" >> "$GITHUB_ENV"
+          echo "CXX=/usr/bin/clang++" >> "$GITHUB_ENV"
+          echo "LLVM_DIR=${llvm_prefix}/lib/cmake/llvm" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${llvm_prefix}/lib/cmake/clang" >> "$GITHUB_ENV"
+
+          /usr/bin/clang++ --version
+          "${llvm_prefix}/bin/llvm-config" --version
+
+      - name: Cache LLVM toolchain (Windows)
+        if: runner.os == 'Windows'
+        id: cache-llvm-windows
+        uses: actions/cache@v4
+        with:
+          path: C:\Program Files\LLVM
+          key: windows-llvm-${{ matrix.llvm-version }}-dev-v2
+
+      - name: Install LLVM toolchain (Windows)
+        if: runner.os == 'Windows' && steps.cache-llvm-windows.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          # choco llvm ships the compiler-only installer which lacks cmake dev files.
+          # Download the full LLVM dev tarball from GitHub releases instead.
+          $ver = "${{ matrix.llvm-patch-version }}"
+          $archive = "clang+llvm-${ver}-x86_64-pc-windows-msvc.tar.xz"
+          $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-${ver}/${archive}"
+          Write-Host "Downloading $url"
+          Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+          Write-Host "Extracting..."
+          tar -xf $archive
+          $src = (Get-ChildItem -Directory "clang+llvm-*")[0].FullName
+          Write-Host "Installing to C:\Program Files\LLVM"
+          New-Item -ItemType Directory -Force "C:\Program Files\LLVM" | Out-Null
+          Copy-Item "$src\*" "C:\Program Files\LLVM\" -Recurse -Force
+          choco install ninja -y --no-progress
+
+      - name: Patch LLVM cmake for DIA SDK (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # LLVM 18.1.8 was built with VS 2019; its cmake exports hardcode the VS 2019 DIA SDK path.
+          # This step runs every time (not gated on cache) and rewrites that path to wherever
+          # diaguids.lib actually lives on this runner.
+          $old_path = "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK/lib/amd64/diaguids.lib"
+
+          $dia_file = Get-ChildItem "C:\Program Files\Microsoft Visual Studio" -Filter "diaguids.lib" `
+                        -Recurse -ErrorAction SilentlyContinue |
+                        Where-Object { $_.FullName -like "*amd64*" } |
+                        Select-Object -First 1
+
+          if (-not $dia_file) {
+            Write-Warning "diaguids.lib not found — linker may fail for PDB targets"
+            exit 0
+          }
+
+          $actual = $dia_file.FullName -replace '\\', '/'
+          Write-Host "diaguids.lib found at: $actual"
+
+          $patched = 0
+          Get-ChildItem "C:\Program Files\LLVM\lib\cmake" -Filter "*.cmake" -Recurse |
+          ForEach-Object {
+            $text = [System.IO.File]::ReadAllText($_.FullName)
+            if ($text.Contains($old_path)) {
+              Write-Host "Patching $($_.Name)"
+              $text = $text.Replace($old_path, $actual)
+              [System.IO.File]::WriteAllText($_.FullName, $text)
+              $patched++
+            }
+          }
+          Write-Host "Patched $patched cmake file(s)"
+
+      - name: Export Windows environment
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $llvm_prefix = "C:\Program Files\LLVM"
+          "LLVM_DIR=$llvm_prefix\lib\cmake\llvm" >> $env:GITHUB_ENV
+          "Clang_DIR=$llvm_prefix\lib\cmake\clang" >> $env:GITHUB_ENV
+          "$llvm_prefix\bin" >> $env:GITHUB_PATH
+
+          & "$llvm_prefix\bin\clang.exe" --version
+
+      - name: Configure (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DLLVM_DIR="$LLVM_DIR" \
+            -DClang_DIR="$Clang_DIR"
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -S . -B build `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DLLVM_DIR="$env:LLVM_DIR" `
+            -DClang_DIR="$env:Clang_DIR" `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel --config Release
+
+      - name: Test
+        shell: bash
+        run: ctest --test-dir build -C Release --output-on-failure --no-tests=ignore
+
+      - name: Record badge status
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p badge-status
+          cat <<EOF > "badge-status/status-${{ matrix.os }}-${{ matrix.compiler }}.json"
+          {
+            "os": "${{ matrix.os }}",
+            "compiler": "${{ matrix.compiler }}",
+            "status": "${{ job.status }}"
+          }
+          EOF
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-${{ matrix.os }}-${{ matrix.compiler }}
+          path: badge-status/status-${{ matrix.os }}-${{ matrix.compiler }}.json
+
+  asan:
+    name: asan / ubuntu-24.04 / clang-18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap apt and add LLVM repository
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-18 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          sudo apt-get update
+
+      - name: Install LLVM toolchain (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-18-dev
+            libclang-18-dev
+            clang-18
+            cmake
+            ninja-build
+          version: ubuntu-24.04-asan-v1
+
+      - name: Setup build environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          echo "CC=$(command -v clang-18)" >> "$GITHUB_ENV"
+          echo "CXX=$(command -v clang++-18)" >> "$GITHUB_ENV"
+          clang++-18 --version
+
+          llvm_cmakedir="$(llvm-config-18 --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+          echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DLLVM_DIR="$LLVM_DIR" \
+            -DClang_DIR="$Clang_DIR" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        env:
+          ASAN_OPTIONS: detect_leaks=0:halt_on_error=1:abort_on_error=1
+        run: ctest --test-dir build --output-on-failure --no-tests=ignore
+
+      - name: Record badge status
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p badge-status
+          cat <<EOF > "badge-status/status-asan.json"
+          {
+            "os": "ubuntu-24.04",
+            "compiler": "asan-clang-18",
+            "status": "${{ job.status }}"
+          }
+          EOF
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-asan
+          path: badge-status/status-asan.json
+
+  ubsan:
+    name: ubsan / ubuntu-24.04 / clang-18
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap apt and add LLVM repository
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-18 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          sudo apt-get update
+
+      - name: Install LLVM toolchain (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-18-dev
+            libclang-18-dev
+            clang-18
+            cmake
+            ninja-build
+          version: ubuntu-24.04-ubsan-v1
+
+      - name: Setup build environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          echo "CC=$(command -v clang-18)" >> "$GITHUB_ENV"
+          echo "CXX=$(command -v clang++-18)" >> "$GITHUB_ENV"
+          clang++-18 --version
+
+          llvm_cmakedir="$(llvm-config-18 --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+          echo "LLVM_DIR=${llvm_cmakedir}" >> "$GITHUB_ENV"
+          echo "Clang_DIR=${clang_cmakedir}" >> "$GITHUB_ENV"
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_CXX_COMPILER="$CXX" \
+            -DLLVM_DIR="$LLVM_DIR" \
+            -DClang_DIR="$Clang_DIR" \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
+            -DCMAKE_C_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure --no-tests=ignore
+
+      - name: Record badge status
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p badge-status
+          cat <<EOF > "badge-status/status-ubsan.json"
+          {
+            "os": "ubuntu-24.04",
+            "compiler": "ubsan-clang-18",
+            "status": "${{ job.status }}"
+          }
+          EOF
+
+      - name: Upload status artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: status-ubsan
+          path: badge-status/status-ubsan.json
+
+  badge:
+    name: Generate SVG Badges
+    if: always()
+    needs: [build, asan, ubsan]
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Install badge tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+      - name: Download all status artifacts
+        uses: actions/download-artifact@v8
         with:
           path: badge-status
           pattern: status-*
           merge-multiple: true
 
       - name: Generate SVG Badges
+        shell: bash
         run: |
-          mkdir -p ${{ steps.badge_dir.outputs.dir }}
-          for f in badge-status/*.json; do
-            echo "file name: $f"
-            [[ ! -f "$f" ]] && continue
-            os=$(jq -r .os "$f")
-            compiler=$(jq -r .compiler "$f")
-            status=$(jq -r .status "$f")
+          set -euxo pipefail
 
-            color="gray"
-            symbol="□"
+          ref_name="${GITHUB_REF_NAME:-}"
+          if [[ "$ref_name" == "staging" ]]; then
+            badge_dir="badges-staging"
+          else
+            badge_dir="badges"
+          fi
 
-            [[ "$status" == "success" ]] && { symbol="✔"; color="green"; prefix="ok"; }
-            [[ "$status" == "skipped" ]] && { symbol="○"; color="gray";  prefix="na"; }
-            [[ "$status" == "failure" ]] && { symbol="✘"; color="red";   prefix="failed"; }
+          mkdir -p "$badge_dir"
+
+          na_badge="$badge_dir/na.svg"
+          na_url="https://img.shields.io/badge/na-%E2%97%8B-gray.svg"
+          if [[ ! -f "$na_badge" ]]; then
+            curl -fsSL "$na_url" -o "$na_badge"
+          fi
+
+          for status_file in badge-status/*.json; do
+            os=$(jq -r '.os' "$status_file")
+            compiler=$(jq -r '.compiler' "$status_file")
+            status=$(jq -r '.status' "$status_file")
+
+            prefix="unknown"
+            symbol="%3F"
+            color="lightgrey"
+
+            case "$status" in
+              success)   prefix="ok";        symbol="%E2%9C%94"; color="green"  ;;
+              failure)   prefix="failed";    symbol="%E2%9C%98"; color="red"    ;;
+              cancelled) prefix="cancelled"; symbol="%E2%97%87"; color="yellow" ;;
+              skipped)   prefix="na";        symbol="%E2%97%8B"; color="gray"   ;;
+            esac
 
             label="${os}-${compiler}"
-            badge="${{ steps.badge_dir.outputs.dir }}/${label}.svg"
-            echo "https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg  $badge"
-            curl -s "https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg" -o "$badge"
+            badge="$badge_dir/${label}.svg"
+            url="https://img.shields.io/badge/${prefix}-${symbol}-${color}.svg"
+            echo "$url -> $badge"
+            curl -fsSL "$url" -o "$badge"
           done
 
-      - name: Upload badge folder to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload badges artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.ref_name == 'staging' && 'badges-staging' || 'badges' }}
+          path: ${{ github.ref_name == 'staging' && 'badges-staging' || 'badges' }}
+
+      - name: Deploy badges to GitHub Pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./${{ steps.badge_dir.outputs.dir }}
-          destination_dir: ${{ steps.badge_dir.outputs.dir }}
+          publish_dir: ./${{ github.ref_name == 'staging' && 'badges-staging' || 'badges' }}
+          destination_dir: ${{ github.ref_name == 'staging' && 'badges-staging' || 'badges' }}
+          keep_files: true
+
+  coverage:
+    name: coverage / ubuntu-24.04 / gcc-14
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    env:
+      CC: gcc-14
+      CXX: g++-14
+      GCOV: gcov-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bootstrap apt and add LLVM repository
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg lsb-release software-properties-common ca-certificates
+
+          codename=$(lsb_release -cs)
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/llvm-snapshot.gpg
+          echo "deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}-18 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-18.list
+          sudo apt-get update
+
+      - name: Install dependencies (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: >-
+            llvm-18-dev
+            libclang-18-dev
+            clang-18
+            cmake
+            ninja-build
+            gcc-14
+            g++-14
+            lcov
+          version: ubuntu-24.04-coverage-v1
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          llvm_cmakedir="$(llvm-config-18 --cmakedir)"
+          clang_cmakedir="$(dirname "${llvm_cmakedir}")/clang"
+
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_CXX_COMPILER=g++-14 \
+            -DCMAKE_C_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
+            -DLLVM_DIR="${llvm_cmakedir}" \
+            -DClang_DIR="${clang_cmakedir}"
+
+      - name: Build
+        shell: bash
+        run: cmake --build build --parallel
+
+      - name: Test
+        shell: bash
+        run: ctest --test-dir build --output-on-failure --parallel
+
+      - name: Capture coverage
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          lcov \
+            --gcov-tool /usr/bin/gcov-14 \
+            --rc geninfo_unexecuted_blocks=1 \
+            --ignore-errors mismatch \
+            --directory build \
+            --capture \
+            --output-file coverage.full.info
+
+          lcov \
+            --gcov-tool /usr/bin/gcov-14 \
+            --remove coverage.full.info \
+              '/usr/*' \
+              '*/tests/*' \
+              '*/build/*' \
+            --ignore-errors unused \
+            --output-file coverage.info
+
+          rm coverage.full.info
+          lcov --gcov-tool /usr/bin/gcov-14 --list coverage.info
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.info
+          disable_search: true
+          fail_ci_if_error: true
+          disable_telem: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
