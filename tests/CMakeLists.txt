@@ -17,6 +17,10 @@ set(FIXTURES
 )
 
 function(add_h5cpp_fixture_test name)
+  set(extra_args "")
+  if(ARGC GREATER 1)
+    set(extra_args "-DEXTRA_ARGS=${ARGV1}")
+  endif()
   add_test(
     NAME h5cpp.${name}
     COMMAND
@@ -26,6 +30,7 @@ function(add_h5cpp_fixture_test name)
         "-DSTUB_DIR=${STUB_DIR}"
         "-DGOLDEN=${GOLDEN_DIR}/${name}.expected"
         "-DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+        ${extra_args}
         -P "${RUN_FIXTURE}"
   )
 endfunction()
@@ -33,3 +38,6 @@ endfunction()
 foreach(fixture IN LISTS FIXTURES)
   add_h5cpp_fixture_test(${fixture})
 endforeach()
+
+# Legacy-mode fixture: exercises producer_h5_legacy.hpp
+add_h5cpp_fixture_test(legacy "--legacy-register-struct")

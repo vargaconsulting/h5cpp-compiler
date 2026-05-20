@@ -20,6 +20,12 @@ cmake_minimum_required(VERSION 3.14)
 get_filename_component(fixture_name "${FIXTURE}" NAME_WE)
 set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
 
+set(h5cpp_cmd "${H5CPP_BIN}")
+if(DEFINED EXTRA_ARGS AND NOT "${EXTRA_ARGS}" STREQUAL "")
+  list(APPEND h5cpp_cmd ${EXTRA_ARGS})
+endif()
+list(APPEND h5cpp_cmd "${FIXTURE}" -- -std=c++17 "-I${STUB_DIR}" "-D${observed}")
+
 execute_process(
   COMMAND
     "${H5CPP_BIN}"
