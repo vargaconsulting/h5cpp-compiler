@@ -41,3 +41,24 @@ endforeach()
 
 # Legacy-mode fixture: exercises producer_h5_legacy.hpp
 add_h5cpp_fixture_test(legacy "--legacy-register-struct")
+
+# --check mode tests
+set(CHECK_FIXTURE "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/primitives.cpp")
+
+add_test(
+  NAME h5cpp.check-pass
+  COMMAND ${CMAKE_COMMAND}
+    -DH5CPP_BIN=$<TARGET_FILE:h5cpp>
+    -DFIXTURE=${CHECK_FIXTURE}
+    -DSTUB_DIR=${STUB_DIR}
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/run_check_pass.cmake"
+)
+
+add_test(
+  NAME h5cpp.check-fail
+  COMMAND ${CMAKE_COMMAND}
+    -DH5CPP_BIN=$<TARGET_FILE:h5cpp>
+    -DFIXTURE=${CHECK_FIXTURE}
+    -DSTUB_DIR=${STUB_DIR}
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/run_check_fail.cmake"
+)
