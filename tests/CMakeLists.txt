@@ -14,6 +14,8 @@ set(FIXTURES
   enum-member
   multi-array
   inheritance
+  duplicate-struct
+  class-type
 )
 
 function(add_h5cpp_fixture_test name)
