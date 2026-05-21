@@ -1,3 +1,4 @@
+# h5cpp-compiler
 [![CI](https://github.com/vargalabs/h5cpp-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/vargalabs/h5cpp-compiler/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/vargalabs/h5cpp-compiler/branch/release/graph/badge.svg)](https://app.codecov.io/gh/vargalabs/h5cpp-compiler/tree/release)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -5,117 +6,19 @@
 [![GitHub release](https://img.shields.io/github/v/release/vargalabs/h5cpp-compiler.svg)](https://github.com/vargalabs/h5cpp-compiler/releases)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue)](https://vargalabs.github.io/h5cpp-compiler)
 
-# h5cpp-compiler
+HDF5 schema compiler for typed C++ data
+--------------------------------------
+**h5cpp-compiler** is a build-time schema generator for [H5CPP](https://h5cpp.org). It uses LLVM/Clang tooling to inspect C++ types reachable from H5CPP I/O calls such as `h5::create`, `h5::read`, `h5::write`, and `h5::append`. From those types, it emits HDF5 compound-type descriptors, so the C++ source remains the schema source of truth. The compiler is optional: H5CPP and HDF5 can be used without it. It becomes valuable when your object model changes often, or when maintaining hand-written HDF5 compound descriptors would be brittle.
 
-> h5cpp-compiler keeps your HDF5 schemas in sync with your C++ structs — automatically, at build time, before silent corruption becomes a runtime bug.
 
-Schema drift is a data-corruption event waiting to happen. This compiler catches it at build time.
+| Layer | Role |
+|------|------|
+| [H5CPP](https://github.com/vargalabs/h5cpp) | Header-only C++ HDF5 I/O library |
+| **h5cpp-compiler** | Build-time generator for C++ compound-type metadata |
 
-## Do I need this?
 
-| Your situation | What to use |
-|---|---|
-| Simple POD structs, no nesting, no arrays | [h5cpp header-only](https://h5cpp.org) — manual registration works |
-| Nested structs, C-style arrays, namespaced types, `std::vector<T>` | **h5cpp-compiler** |
 
-## The problem
-
-You changed a field in your simulation struct. Recompiled. Ran the job for six hours. The output file looks fine — until you load it and the particle coordinates are in the temperature column.
-
-HDF5 compound types and C++ structs must match byte-for-byte. One padding change, one field reorder, one `int` → `double` swap, and you're writing garbage. The worst part? You usually don't know until post-processing, three days later, when you can't reproduce the run.
-
-## The solution
-
-h5cpp-compiler is a build-time correctness gate. It parses your translation unit, finds every POD struct referenced by `h5::write`, `h5::read`, `h5::create`, or `h5::append`, and emits HDF5 compound-type descriptors that match your C++ layout exactly.
-
-Change a struct → rebuild → the generated descriptor tracks the change immediately. No silent mismatches. No 3 AM debugging sessions.
-
-## 30-second demo
-
-```bash
-# 1. A struct marked with an h5:: operator
-cat > experiment.cpp << 'EOF'
-#include <h5cpp/all>
-struct Particle { double x, y, z; int id; };
-int main() {
-    auto fd = h5::create("run.h5");
-    std::vector<Particle> particles(100);
-    h5::write(fd, "particles", particles);
-}
-EOF
-
-# 2. Generate descriptors that match the struct exactly
-h5cpp experiment.cpp -- $(CXXFLAGS) -Dgenerated.h
-
-# 3. Someone refactors the struct — field moves, padding shifts
-cat > experiment.cpp << 'EOF'
-#include <h5cpp/all>
-struct Particle { double x, y; int id; double z; };  // z moved
-int main() {
-    auto fd = h5::open("run.h5");
-    std::vector<Particle> particles(100);
-    h5::write(fd, "particles", particles);
-}
-EOF
-
-# 4. Re-generate — descriptor now reflects the new layout
-h5cpp experiment.cpp -- $(CXXFLAGS) -Dgenerated.h
-# The generated descriptor matches your C++ struct exactly.
-# If it no longer matches the existing file, HDF5 errors out instead
-# of silently corrupting the dataset.
-```
-
-## Installation
-
-### Prerequisites
-
-- LLVM / Clang development libraries
-- CMake 3.14+
-- C++17 compiler
-
-### Build from source
-
-```bash
-# Ubuntu / Debian
-sudo apt install build-essential cmake llvm-dev libclang-dev
-
-# macOS
-brew install llvm cmake
-
-# Build and install
-cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
-cmake --build build --parallel
-sudo cmake --install build
-```
-
-### Prebuilt binaries
-
-See [GitHub Releases](https://github.com/vargalabs/h5cpp-compiler/releases).
-
-## CMake integration
-
-```cmake
-find_package(h5cpp-compiler REQUIRED)
-
-h5cpp_compiler_generate(
-    INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/experiment.cpp
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/experiment_h5.hpp
-)
-
-target_sources(my_app PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/experiment_h5.hpp)
-```
-
-See `examples/cmake-integration/` for a complete working project.
-
-## Compatibility
-
-| h5cpp-compiler | h5cpp library |
-|---|---|
-| 1.10.4.6 | 1.10.4.x |
-
-Keep the compiler and library versions in sync.
-
-## Build matrix
+## Supported platforms
 
 | OS / Compiler | GCC 13            | GCC 14            | GCC 15    | Clang 17         | Clang 18         | Clang 19         | Clang 20         | Apple Clang    | MSVC           |
 |---------------|-------------------|-------------------|-----------|------------------|------------------|------------------|------------------|----------------|----------------|
@@ -124,9 +27,146 @@ Keep the compiler and library versions in sync.
 | macOS 15      | ![NA][NA]         | ![NA][NA]         | ![NA][NA] | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![mac-ac][400] | ![NA][NA]      |
 | Windows       | ![NA][NA]         | ![NA][NA]         | ![NA][NA] | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![NA][NA]        | ![NA][NA]      | ![win-msvc][500] |
 
-## How it works
+## Release packages
+Self-contained, statically linked packages are available for common Linux, macOS, and Windows targets.
 
-h5cpp-compiler uses LLVM/Clang tooling to build the AST of your translation unit, locates struct types passed to h5:: I/O operators, and emits a self-contained header with HDF5 `H5T_COMPOUND` descriptors in topological order. The generated file uses `#pragma once` and drops straight into your build.
+| Platform | Package |
+|----------|---------|
+| Debian / Ubuntu amd64 | [h5cpp-compiler-1.12.3-Linux-amd64.deb](https://github.com/vargalabs/h5cpp-compiler/releases/download/v1.12.3/h5cpp-compiler-1.12.3-Linux-amd64.deb) |
+| Debian / Ubuntu arm64 | [h5cpp-compiler-1.12.3-Linux-arm64.deb](https://github.com/vargalabs/h5cpp-compiler/releases/download/v1.12.3/h5cpp-compiler-1.12.3-Linux-arm64.deb) |
+| Red Hat / Fedora x86_64 | [h5cpp-compiler-1.12.3-Linux-x86_64.rpm](https://github.com/vargalabs/h5cpp-compiler/releases/download/v1.12.3/h5cpp-compiler-1.12.3-Linux-x86_64.rpm) |
+| Red Hat / Fedora aarch64 | [h5cpp-compiler-1.12.3-Linux-aarch64.rpm](https://github.com/vargalabs/h5cpp-compiler/releases/download/v1.12.3/h5cpp-compiler-1.12.3-Linux-aarch64.rpm) |
+| macOS arm64 | [h5cpp-compiler-1.12.3-Darwin.pkg](https://github.com/vargalabs/h5cpp-compiler/releases/download/v1.12.3/h5cpp-compiler-1.12.3-Darwin.pkg) |
+| Windows x64 | [h5cpp-compiler-1.12.3-win64.exe](https://github.com/vargalabs/h5cpp-compiler/releases/download/v1.12.3/h5cpp-compiler-1.12.3-win64.exe) |
+
+
+## Under the hood
+
+h5cpp-compiler uses LLVM/Clang tooling to build the AST of your translation unit, locates struct types passed to h5:: I/O operators, walks the reachable C++ value-object graph, and emits a self-contained header with HDF5 `H5T_COMPOUND` descriptors in dependency order. The generated file uses `#pragma once` and drops straight into your build.
+
+## CMake integration
+
+```cmake
+find_package(h5cpp-compiler REQUIRED)
+h5cpp_compiler_generate(
+    INPUT  ${CMAKE_CURRENT_SOURCE_DIR}/some-source.cpp
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/some-header.hpp
+)
+target_include_directories(my_app PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_sources(my_app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/some-source.cpp)
+```
+
+## Command-line usage
+
+```bash
+h5cpp -o some-header.hpp source.cpp -- $(CXXFLAGS)
+```
+
+Output format defaults to `--hdf5`. Pass `--protocol-buffers` to select the Protobuf backend (currently a stub).
+
+```cpp
+#include <h5cpp/all>
+
+struct particle_t {
+    double x, y, z;
+    int id;
+};
+
+#include "some-header.hpp"
+
+int main() {
+    auto fd = h5::create("storage.h5");
+    std::vector<particle_t> particles(100);
+    h5::write(fd, "particles", particles);
+}
+```
+
+```bash
+h5cpp -o some-header.hpp experiment.cpp -- -std=c++17 -I/usr/local/HDF_Group/HDF5/2.2.0/include
+```
+
+### Generated output
+```
+#pragma once
+#include <hdf5.h>
+
+namespace h5 {
+    template<> hid_t inline register_struct<particle_t>(){
+
+        hid_t ct_00 = H5Tcreate(H5T_COMPOUND, sizeof (particle_t));
+        H5Tinsert(ct_00, "x",	HOFFSET(particle_t,x),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "y",	HOFFSET(particle_t,y),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "z",	HOFFSET(particle_t,z),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "id",	HOFFSET(particle_t,id),H5T_NATIVE_INT);
+
+        return ct_00;
+    };
+}
+H5CPP_REGISTER_STRUCT(particle_t);
+
+```
+
+```bash
+g++ -std=c++17 experiment.cpp -I. -I/usr/local/HDF_Group/HDF5/2.2.0/include \
+    -L/usr/local/HDF_Group/HDF5/2.2.0/lib -lhdf5 -lz \
+    -Wl,-rpath,/usr/local/HDF_Group/HDF5/2.2.0/lib -o experiment
+```
+```text
+HDF5 "storage.h5" {
+    GROUP "/" {
+    DATASET "particles" {
+        DATATYPE  H5T_COMPOUND {
+            H5T_IEEE_F64LE "x";
+            H5T_IEEE_F64LE "y";
+            H5T_IEEE_F64LE "z";
+            H5T_STD_I32LE "id";
+        }
+        DATASPACE  SIMPLE { ( 100 ) / ( 100 ) }
+        STORAGE_LAYOUT {
+            CONTIGUOUS
+            SIZE 3200
+            OFFSET 2048
+        }
+        FILTERS {
+            NONE
+        }
+        FILLVALUE {
+            FILL_TIME H5D_FILL_TIME_IFSET
+            VALUE  H5D_FILL_VALUE_DEFAULT
+        }
+        ALLOCATION_TIME {
+            H5D_ALLOC_TIME_LATE
+        }
+    }
+    }
+}
+```
+
+## Build from source
+
+Source builds require:
+
+- LLVM / Clang development libraries
+- CMake 3.14+
+- C++17 compiler
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build
+cmake --build build --parallel
+sudo cmake --install build
+```
+
+
+
+See `examples/cmake-integration/` for a complete working project.
+
+## Compatibility
+
+| h5cpp-compiler | h5cpp library |
+|---|---|
+| 1.12.x | 1.12.x |
+
+Keep the compiler and library versions in sync.
 
 ## License
 

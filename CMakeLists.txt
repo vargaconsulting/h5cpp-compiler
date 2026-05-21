@@ -1,6 +1,6 @@
 #  _____________________________________________________________________________
-#  Copyright (c) 2018-2025 Steven Varga, Toronto,ON Canada
-#  Author: Varga, Steven <steven@vargaconsulting.ca>
+#  Copyright (c) 2018-2026 Steven Varga, Toronto,ON Canada
+#  Author: Varga, Steven <steven@vargalabs.com>
 #  _____________________________________________________________________________
 
 cmake_minimum_required(VERSION 3.14)
@@ -11,6 +11,7 @@ project(h5cpp-compiler-dev VERSION 1.12.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(NOT MSVC)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -s")
@@ -192,7 +193,7 @@ install(
 
 # CPack packaging
 set(CPACK_PACKAGE_NAME "h5cpp-compiler")
-set(CPACK_PACKAGE_VENDOR "VargaConsulting")
+set(CPACK_PACKAGE_VENDOR "VargaLABS")
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
 set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
@@ -211,7 +212,7 @@ if(DEFINED H5CPP_VERSION_OVERRIDE AND NOT H5CPP_VERSION_OVERRIDE STREQUAL "")
   endif()
 endif()
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Source code transformation tool for HDF5 H5CPP library")
-set(CPACK_PACKAGE_CONTACT "steven@vargaconsulting.ca")
+set(CPACK_PACKAGE_CONTACT "steven@vargalabs.com")
 set(CPACK_PACKAGE_LICENSE "MIT")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYRIGHT.txt")
 set(CPACK_MONOLITHIC_INSTALL 1)
@@ -224,7 +225,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_RPM_PACKAGE_GROUP "Development/Tools")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(CPACK_GENERATOR "productbuild")
-  set(CPACK_PRODUCTBUILD_IDENTIFIER "ca.vargaconsulting.h5cpp-compiler")
+  set(CPACK_PRODUCTBUILD_IDENTIFIER "com.vargalabs.h5cpp-compiler")
   set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/local")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(CPACK_GENERATOR "NSIS")
