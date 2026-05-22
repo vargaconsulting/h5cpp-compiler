@@ -1,8 +1,8 @@
-.TH H5CPP 1 2020-02-06 GNU h5cpp programming manual
+.TH H5CPP 1 2026-06-12 GNU h5cpp programming manual
 .SH NAME
 h5cpp \- compiles HDF5 compound datatype descriptors from C++ AST
 .SH SYNOPSIS
-.B h5cpp translation_unit.cpp --$(CXXFLAGS) -Doutput.h
+.B h5cpp translation_unit.cpp --$(CXXFLAGS) -Doutput.hpp
 
 .SH "DESCRIPTION"
 H5CPP-compiler automates the tedious and error prone process of handwriting HDF5
@@ -50,35 +50,31 @@ the following POD struct type Record:
 .EX
 .B struct.h:
 .in +4n
-typedef unsigned long long int MyUInt; // typedefs or aliasing is fine
-namespace sn::example {                // so are nested namespaces are
-    struct Record {                    // currently must be a POD struct
-        MyUInt                    idx; // typedef type
-        float             field_02[7]; // const array mapped 
-    };
-}
+struct particle_t {
+    double x, y, z;
+    int id;
+};
 .in
 .EE
 .PP
-The output file `generated.h` are to be included in the translation unit file as if it existed,
+The output file `generated.hpp` are to be included in the translation unit file as if it existed,
 as the following code snippet demonstrates:
 
 .PP
 .EX
 .BI translation_unit.cpp:
 .in +4n
-#include <h5cpp/core>
-   #include <generated.h> // this must match -Dspecified_name.h and the content will be overwritten
-#include <h5cpp/io>
+#include <h5cpp/all>
+#include <vector>
+#include "struct.h" 
+#include "generated.hpp"
 
-int main (int argc, char *argv[]) {
-    [...]
-    h5::fd_t fd = h5::create("example.h5",H5F_ACC_TRUNC);
-
-    std::vector<sn::example::Record> data =
-	        h5::utils::get_test_data<sn::example::Record>( N );
-    h5::write(fd, "some_name", data );
+int main() {
+    auto fd = h5::create("run.h5", H5F_ACC_TRUNC);
+    std::vector<particle_t> particles(100);
+    h5::write(fd, "particles", particles);
 }
+
 .in
 .EE
 .PP
@@ -89,27 +85,27 @@ registration macro.
 .EX
 .B generated.h:
 .in +4n
-#ifndef H5CPP_GUARD_ggket
-#define H5CPP_GUARD_ggket
+/* Copyright (c) 2018-2026 vargalabs, Toronto,ON Canada */
+#pragma once
+#include <hdf5.h>
 
-namespace h5{
-    //template specialization of sn::example::Record to create HDF5 COMPOUND type
-    template<> hid_t inline register_struct<sn::example::Record>(){
-        hsize_t at_00_[] ={7};            hid_t at_00 = H5Tarray_create(H5T_NATIVE_FLOAT,1,at_00_);
+namespace h5 {
+    //template specialization of particle_t to create HDF5 COMPOUND type
+    template<> hid_t inline register_struct<particle_t>(){
 
-        hid_t ct_00 = H5Tcreate(H5T_COMPOUND, sizeof (sn::example::Record));
-        H5Tinsert(ct_00, "idx",	HOFFSET(sn::example::Record,idx),H5T_NATIVE_ULLONG);
-        H5Tinsert(ct_00, "field_02",	HOFFSET(sn::example::Record,field_02),at_00);
-
-        //closing all hid_t allocations to prevent resource leakage
-        H5Tclose(at_00); 
+        hid_t ct_00 = H5Tcreate(H5T_COMPOUND, sizeof (particle_t));
+        H5Tinsert(ct_00, "x",	HOFFSET(particle_t,x),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "y",	HOFFSET(particle_t,y),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "z",	HOFFSET(particle_t,z),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "id",	HOFFSET(particle_t,id),H5T_NATIVE_INT);
 
         //if not used with h5cpp framework, but as a standalone code generator then
         //the returned 'hid_t ct_00' must be closed: H5Tclose(ct_00);
         return ct_00;
     };
 }
-H5CPP_REGISTER_STRUCT(sn::example::Record);
+H5CPP_REGISTER_STRUCT(particle_t);
+
 .in
 .EE
 .PP
@@ -134,16 +130,13 @@ struct: struct.o
 .PP
 
 Details set of examples may be found in
-.B /usr/share/h5cpp/examples
+.B /usr/share/h5cpp/compound
 directory, for general use cases, interaction with linear algebra libraries as well as 
 scaling the library to MPI based clusters.
 
 
-.SH CAVEATS
-silently fails when there exists white space between -D output_filename.h
-
 .SH AUTHOR
-2018-2020 steven varga <steven@vargaconsulting.ca>
+2018-2026 steven varga <steven@vargalabs.com>
 
 .UR http://h5cpp.org
 

@@ -5,7 +5,11 @@ on:
     branches: [release, staging]
 
 permissions:
-  contents: write 
+  contents: write
+
+env:
+  # Opt into Node 24 runtime for JavaScript actions (default flips 2026-06-02).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   deploy:
@@ -13,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v5

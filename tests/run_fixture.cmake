@@ -23,11 +23,11 @@ set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
 execute_process(
   COMMAND
     "${H5CPP_BIN}"
+    -o "${observed}"
     "${FIXTURE}"
     --
     -std=c++17
     "-I${STUB_DIR}"
-    "-D${observed}"
   RESULT_VARIABLE rc
   OUTPUT_VARIABLE tool_stdout
   ERROR_VARIABLE  tool_stderr

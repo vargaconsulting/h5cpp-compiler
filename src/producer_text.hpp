@@ -1,12 +1,6 @@
-/*
- * Copyright (c) 2018-2020 Steven Varga, Toronto,ON Canada
- * Author: Varga, Steven <steven@vargaconsulting.ca>
- */
+/* Copyright (c) 2018-2026 Steven Varga, steven@vargalabs.com Toronto, ON Canada */
 
-#ifndef  H5CPP_PRODUCER_TEXT_HPP 
-#define  H5CPP_PRODUCER_TEXT_HPP
-
-
+#pragma once
 
 struct TextProducer : Producer<TextProducer> {
 
@@ -35,7 +29,6 @@ struct TextProducer : Producer<TextProducer> {
 		io <<indent<< "<type release: " << type << ">\n";
 	};
 }
-#endif
 
 
 

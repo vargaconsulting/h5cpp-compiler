@@ -10,6 +10,12 @@ on:
 permissions:
   contents: write
 
+env:
+  # Opt into Node 24 runtime for JavaScript actions (default flips 2026-06-02).
+  # Silences deprecation warnings from transitive Node-20 actions inside
+  # awalsh128/cache-apt-pkgs-action, codecov/codecov-action, and actions/cache@v4.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
