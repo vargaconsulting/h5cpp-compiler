@@ -17,6 +17,8 @@
 
 #include "producer_h5.hpp"
 #include "consumer.hpp"
+#include "producer_pb.hpp"
+#include "consumer_pb.hpp"
 #include "h5_attr_translator.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
@@ -38,6 +40,23 @@ clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::c
 					)
 					)) ))  ) ),
 				clang::ast_matchers::hasDeclaration( clang::ast_matchers::cxxRecordDecl( clang::ast_matchers::isClass()  ).bind("classDecl")) )
+			) )),
+			clang::ast_matchers::isTemplateInstantiation()
+	))  )))
+));
+
+// pbTemplateMatcher: same shape as h5templateMatcher, but triggers on the
+// pb.hpp public surface. Covers pb::encode, pb::decode, and pb::encode_into.
+clang::ast_matchers::StatementMatcher pbTemplateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
+	clang::ast_matchers::hasDescendant( clang::ast_matchers::declRefExpr( clang::ast_matchers::to( clang::ast_matchers::varDecl().bind("variableDecl")  ) ) ),
+	clang::ast_matchers::hasDescendant( clang::ast_matchers::declRefExpr( clang::ast_matchers::to(
+		clang::ast_matchers::functionDecl( clang::ast_matchers::allOf(
+			clang::ast_matchers::eachOf(
+				clang::ast_matchers::hasName("pb::encode"),  clang::ast_matchers::hasName("pb::decode"),
+				clang::ast_matchers::hasName("pb::encode_into")
+			),
+			clang::ast_matchers::hasTemplateArgument(0,  clang::ast_matchers::refersToType( clang::ast_matchers::qualType(
+				clang::ast_matchers::hasDeclaration( clang::ast_matchers::cxxRecordDecl(clang::ast_matchers::isStruct()).bind("cxxRecordDecl"))
 			) )),
 			clang::ast_matchers::isTemplateInstantiation()
 	))  )))
@@ -112,10 +131,14 @@ int main(int argc, const char **argv) {
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
 			}
-			case OutputFormat::protobuf:
-				llvm::errs() << "h5cpp-compiler: --format protobuf not yet implemented\n";
-				rc = 1;
+			case OutputFormat::protobuf: {
+				PbTemplateCallback<PbProducer> callback(work_path);
+				clang::ast_matchers::MatchFinder Finder;
+				Finder.addMatcher(pbTemplateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
+				if (rc == 0 && callback.error()) rc = 1;
 				break;
+			}
 			case OutputFormat::json:
 				llvm::errs() << "h5cpp-compiler: --format json not yet implemented\n";
 				rc = 1;
