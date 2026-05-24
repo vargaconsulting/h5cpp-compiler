@@ -77,6 +77,19 @@ foreach(fixture IN LISTS FIXTURES)
   add_h5cpp_fixture_test(${fixture})
 endforeach()
 
+set(PB_FIXTURES
+  pb_primitives
+  pb_strings_enums
+  pb_composites
+  pb_variant
+  pb_wire_specs
+  pb_chrono
+)
+
+foreach(fixture IN LISTS PB_FIXTURES)
+  add_h5cpp_backend_fixture_test(${fixture} protobuf)
+endforeach()
+
 set(RLP_FIXTURES
   rlp_primitives
   rlp_arrays
