@@ -77,6 +77,18 @@ foreach(fixture IN LISTS FIXTURES)
   add_h5cpp_fixture_test(${fixture})
 endforeach()
 
+set(RLP_FIXTURES
+  rlp_primitives
+  rlp_arrays
+  rlp_nested
+  rlp_strings
+  rlp_timestamp
+)
+
+foreach(fixture IN LISTS RLP_FIXTURES)
+  add_h5cpp_backend_fixture_test(${fixture} rlp)
+endforeach()
+
 set(JSON_FIXTURES
   json_primitives
   json_arrays

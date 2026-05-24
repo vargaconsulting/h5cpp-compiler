@@ -40,6 +40,11 @@ inline bool is_h5_attr_name(llvm::StringRef name) {
         || name == "serialize_full";
 }
 
+inline bool is_rlp_attr_name(llvm::StringRef name) {
+    return name == "name"      || name == "ignore"      || name == "doc"
+        || name == "alias"     || name == "required"    || name == "timestamp";
+}
+
 inline bool is_json_attr_name(llvm::StringRef name) {
     return name == "name"      || name == "ignore"      || name == "doc"
         || name == "alias"     || name == "version"     || name == "name_all"
@@ -177,6 +182,10 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     llvm::StringRef body    = spec.substr(start);
 
     bool is_h5  = body.starts_with("h5::");
+    bool is_rlp = body.starts_with("rlp::");
+    if (!is_h5 && !is_rlp) return spec.str();
+    llvm::StringRef ns = is_h5 ? "h5::" : "rlp::";
+    bool is_h5  = body.starts_with("h5::");
     bool is_json = body.starts_with("json::");
     if (!is_h5 && !is_json) return spec.str();
     llvm::StringRef ns = is_h5 ? "h5::" : "json::";
@@ -204,6 +213,8 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
            && (std::isalnum(static_cast<unsigned char>(body[i])) || body[i] == '_')) ++i;
     if (i == 0) return spec.str();
     llvm::StringRef name = body.substr(0, i);
+    if (is_h5 && !is_h5_attr_name(name)) return spec.str();
+    if (is_rlp && !is_rlp_attr_name(name)) return spec.str();
     if (is_h5 && !is_h5_attr_name(name)) return spec.str();
     if (is_json && !is_json_attr_name(name)) return spec.str();
     if (is_h5 && !is_h5_attr_name(name)) return spec.str();
@@ -283,6 +294,7 @@ inline std::string rewrite(llvm::StringRef src) {
                 continue;
             }
             llvm::StringRef block = src.substr(i + 2, close - i - 2);
+            if (block.contains("h5::") || block.contains("rlp::")) {
             if (block.contains("h5::") || block.contains("json::")) {
             if (block.contains("h5::") || block.contains("msgpack::")) {
             if (block.contains("h5::") || block.contains("cbor::")) {
@@ -320,6 +332,7 @@ inline void install_virtual_files(clang::tooling::ClangTool& Tool,
     for (const auto& p : paths) {
         std::string content = read_file(p);
         if (content.empty()) continue;
+        if (content.find("h5::") == std::string::npos && content.find("rlp::") == std::string::npos) continue;
         if (content.find("h5::") == std::string::npos && content.find("json::") == std::string::npos) continue;
         if (content.find("h5::") == std::string::npos && content.find("msgpack::") == std::string::npos) continue;
         if (content.find("h5::") == std::string::npos && content.find("cbor::") == std::string::npos) continue;
