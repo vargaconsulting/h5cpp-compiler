@@ -16,6 +16,7 @@
 #include <fstream>
 
 #include "producer_h5.hpp"
+#include "producer_sql.hpp"
 #include "consumer.hpp"
 #include "h5_attr_translator.hpp"
 
@@ -43,7 +44,8 @@ clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::c
 	))  )))
 ));
 
-enum class OutputFormat { hdf5, protobuf, json, msgpack, cbor, bson, avro, rlp };
+enum class OutputFormat { hdf5, protobuf, json, msgpack, cbor, bson, avro, rlp,
+                          sql_postgres, sql_mysql, sql_lite3 };
 
 static llvm::cl::OptionCategory MyToolCategory("h5cpp options");
 static llvm::cl::extrahelp CommonHelp(clang::tooling::CommonOptionsParser::HelpMessage);
@@ -67,7 +69,10 @@ static llvm::cl::opt<OutputFormat> Format(llvm::cl::desc("Output format:"),
         clEnumValN(OutputFormat::cbor,     "cbor",     "CBOR descriptor"),
         clEnumValN(OutputFormat::bson,     "bson",     "BSON descriptor"),
         clEnumValN(OutputFormat::avro,     "avro",     "Avro descriptor"),
-        clEnumValN(OutputFormat::rlp,      "rlp",      "RLP descriptor")
+        clEnumValN(OutputFormat::rlp,      "rlp",      "RLP descriptor"),
+        clEnumValN(OutputFormat::sql_postgres, "sql-postgres", "PostgreSQL DDL"),
+        clEnumValN(OutputFormat::sql_mysql,    "sql-mysql",    "MySQL DDL"),
+        clEnumValN(OutputFormat::sql_lite3,    "sql-lite3",    "SQLite3 DDL")
     ),
     llvm::cl::init(OutputFormat::hdf5),
     llvm::cl::cat(MyToolCategory));
@@ -140,6 +145,24 @@ int main(int argc, const char **argv) {
 				llvm::errs() << "h5cpp-compiler: --format rlp not yet implemented\n";
 				rc = 1;
 				break;
+			case OutputFormat::sql_postgres: {
+				H5TemplateCallback<SqlProducer<SqlDialect::postgres>> callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
+				break;
+			}
+			case OutputFormat::sql_mysql: {
+				H5TemplateCallback<SqlProducer<SqlDialect::mysql>> callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
+				break;
+			}
+			case OutputFormat::sql_lite3: {
+				H5TemplateCallback<SqlProducer<SqlDialect::sqlite3>> callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
+				break;
+			}
 		}
 	}
 
