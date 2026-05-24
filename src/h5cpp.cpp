@@ -19,6 +19,8 @@
 #include "consumer.hpp"
 #include "producer_pb.hpp"
 #include "consumer_pb.hpp"
+#include "consumer_proto.hpp"
+#include "pb_attr_translator.hpp"
 #include "h5_attr_translator.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
@@ -96,6 +98,11 @@ static llvm::cl::opt<bool> CheckMode("check",
     llvm::cl::cat(MyToolCategory),
     llvm::cl::init(false));
 
+static llvm::cl::opt<std::string> ProtoOutputFile("proto-out",
+    llvm::cl::desc("Phase 3: .proto schema output (used with --protobuf)"),
+    llvm::cl::value_desc("file"),
+    llvm::cl::cat(MyToolCategory));
+
 int main(int argc, const char **argv) {
 	std::cerr <<
 		"H5CPP: Copyright (c) 2018-2026, VargaLABS, Toronto, ON Canada\n"
@@ -116,6 +123,12 @@ int main(int argc, const char **argv) {
 	h5_attr_translator::install_virtual_files(
 		Tool, OptionsParser.getSourcePathList(), _h5_attr_storage);
 
+	// Issue #31: rewrite [[pb::xxx(...)]] → [[clang::annotate("pb::xxx", ...)]]
+	// for each source path before Clang sees it.
+	std::vector<std::string> _pb_attr_storage;
+	pb_attr_translator::install_virtual_files(
+		Tool, OptionsParser.getSourcePathList(), _pb_attr_storage);
+
 	std::string work_path = OutputFile;
 	if (CheckMode) {
 		work_path = OutputFile + ".h5cpp-check";
@@ -135,6 +148,11 @@ int main(int argc, const char **argv) {
 				PbTemplateCallback<PbProducer> callback(work_path);
 				clang::ast_matchers::MatchFinder Finder;
 				Finder.addMatcher(pbTemplateMatcher, &callback);
+				std::optional<ProtoTemplateCallback> proto_cb;
+				if (!ProtoOutputFile.empty()) {
+					proto_cb.emplace(ProtoOutputFile);
+					Finder.addMatcher(pbTemplateMatcher, &*proto_cb);
+				}
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				if (rc == 0 && callback.error()) rc = 1;
 				break;
