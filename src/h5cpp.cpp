@@ -17,6 +17,7 @@
 
 #include "producer_h5.hpp"
 #include "consumer.hpp"
+#include "h5_attr_translator.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
 	clang::ast_matchers::hasDescendant( clang::ast_matchers::declRefExpr( clang::ast_matchers::to( clang::ast_matchers::varDecl().bind("variableDecl")  ) ) ),
@@ -42,13 +43,13 @@ clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::c
 	))  )))
 ));
 
-enum class OutputFormat { hdf5, protobuf };
+enum class OutputFormat { hdf5, protobuf, json, msgpack, cbor, bson, avro, rlp };
 
 static llvm::cl::OptionCategory MyToolCategory("h5cpp options");
 static llvm::cl::extrahelp CommonHelp(clang::tooling::CommonOptionsParser::HelpMessage);
 
 static llvm::cl::opt<std::string> OutputFile("o",
-    llvm::cl::desc("Output file for generated type registrations"),
+    llvm::cl::desc("Output file"),
     llvm::cl::value_desc("file"),
     llvm::cl::Required,
     llvm::cl::cat(MyToolCategory));
@@ -59,8 +60,14 @@ static llvm::cl::alias OutputFileLong("output",
 
 static llvm::cl::opt<OutputFormat> Format(llvm::cl::desc("Output format:"),
     llvm::cl::values(
-        clEnumValN(OutputFormat::hdf5,     "hdf5",             "HDF5 compound type registrations (default)"),
-        clEnumValN(OutputFormat::protobuf, "protocol-buffers", "Protocol Buffers schema [not yet implemented]")
+        clEnumValN(OutputFormat::hdf5,     "hdf5",     "HDF5 compound type registrations (default)"),
+        clEnumValN(OutputFormat::protobuf, "protobuf", "Protocol Buffers descriptor"),
+        clEnumValN(OutputFormat::json,     "json",     "JSON Schema descriptor"),
+        clEnumValN(OutputFormat::msgpack,  "msgpack",  "MessagePack descriptor"),
+        clEnumValN(OutputFormat::cbor,     "cbor",     "CBOR descriptor"),
+        clEnumValN(OutputFormat::bson,     "bson",     "BSON descriptor"),
+        clEnumValN(OutputFormat::avro,     "avro",     "Avro descriptor"),
+        clEnumValN(OutputFormat::rlp,      "rlp",      "RLP descriptor")
     ),
     llvm::cl::init(OutputFormat::hdf5),
     llvm::cl::cat(MyToolCategory));
@@ -84,28 +91,61 @@ int main(int argc, const char **argv) {
 	clang::tooling::ClangTool Tool(OptionsParser.getCompilations(),
 				 OptionsParser.getSourcePathList());
 
-	if (Format == OutputFormat::protobuf) {
-		llvm::errs() << "h5cpp-compiler: --protocol-buffers backend is not yet implemented\n";
-		return 1;
-	}
+	// Issue #32: rewrite [[h5::xxx(...)]] → [[clang::annotate("h5::xxx", ...)]]
+	// for each source path before Clang sees it.
+	std::vector<std::string> _h5_attr_storage;
+	h5_attr_translator::install_virtual_files(
+		Tool, OptionsParser.getSourcePathList(), _h5_attr_storage);
 
-	const std::string& path = OutputFile;
-	std::string work_path = path;
+	std::string work_path = OutputFile;
 	if (CheckMode) {
-		work_path = path + ".h5cpp-check";
+		work_path = OutputFile + ".h5cpp-check";
 	}
 
 	int rc = 0;
 	{
-		H5TemplateCallback<H5Producer> callback( work_path );
 		clang::ast_matchers::MatchFinder Finder;
-		Finder.addMatcher(h5templateMatcher, &callback );
-		rc = Tool.run( clang::tooling::newFrontendActionFactory (&Finder).get());
+		switch (Format) {
+			case OutputFormat::hdf5: {
+				H5TemplateCallback<H5Producer> callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
+				break;
+			}
+			case OutputFormat::protobuf:
+				llvm::errs() << "h5cpp-compiler: --format protobuf not yet implemented\n";
+				rc = 1;
+				break;
+			case OutputFormat::json:
+				llvm::errs() << "h5cpp-compiler: --format json not yet implemented\n";
+				rc = 1;
+				break;
+			case OutputFormat::msgpack:
+				llvm::errs() << "h5cpp-compiler: --format msgpack not yet implemented\n";
+				rc = 1;
+				break;
+			case OutputFormat::cbor:
+				llvm::errs() << "h5cpp-compiler: --format cbor not yet implemented\n";
+				rc = 1;
+				break;
+			case OutputFormat::bson:
+				llvm::errs() << "h5cpp-compiler: --format bson not yet implemented\n";
+				rc = 1;
+				break;
+			case OutputFormat::avro:
+				llvm::errs() << "h5cpp-compiler: --format avro not yet implemented\n";
+				rc = 1;
+				break;
+			case OutputFormat::rlp:
+				llvm::errs() << "h5cpp-compiler: --format rlp not yet implemented\n";
+				rc = 1;
+				break;
+		}
 	}
 
 	if (CheckMode && rc == 0) {
 		std::ifstream generated(work_path);
-		std::ifstream existing(path);
+		std::ifstream existing(OutputFile);
 		bool same = false;
 		if (generated && existing) {
 			std::string g((std::istreambuf_iterator<char>(generated)),
@@ -117,7 +157,7 @@ int main(int argc, const char **argv) {
 		std::remove(work_path.c_str());
 		if (!same) {
 			llvm::errs() << "h5cpp-compiler --check: generated file is out of date: "
-			             << path << "\n";
+			             << OutputFile << "\n";
 			return 1;
 		}
 	}

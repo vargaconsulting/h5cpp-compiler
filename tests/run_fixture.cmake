@@ -1,14 +1,15 @@
 # Drive a single fixture run.
 #
 # Inputs (passed via -D on the cmake -P invocation):
-#   H5CPP_BIN  : absolute path to the h5cpp executable
-#   FIXTURE    : absolute path to the fixture source file (.cpp)
-#   STUB_DIR   : include directory containing tests/stub/h5cpp_stub.hpp
-#   GOLDEN     : absolute path to the golden expected output (may not exist)
-#   OUTPUT_DIR : directory for the observed output
+#   H5CPP_BIN      : absolute path to the h5cpp executable
+#   FIXTURE        : absolute path to the fixture source file (.cpp)
+#   STUB_DIR       : include directory containing tests/stub/h5cpp_stub.hpp
+#   GOLDEN         : absolute path to the golden expected output (may not exist)
+#   BACKEND_FORMAT : backend format string (optional, defaults to hdf5)
+#   OUTPUT_DIR     : directory for the observed output
 #
 # Behaviour:
-#   - Runs h5cpp on the fixture, capturing the generated header.
+#   - Runs h5cpp on the fixture with --format <BACKEND_FORMAT> -o <observed>.
 #   - Normalises the random include guard so the output is byte-stable.
 #   - If GOLDEN exists, diffs against it; mismatch fails the test.
 #   - If GOLDEN does not exist, prints a hint with the observed path and passes.
@@ -18,11 +19,21 @@
 cmake_minimum_required(VERSION 3.14)
 
 get_filename_component(fixture_name "${FIXTURE}" NAME_WE)
-set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
+
+if(NOT DEFINED BACKEND_FORMAT OR BACKEND_FORMAT STREQUAL "")
+  set(BACKEND_FORMAT "hdf5")
+endif()
+
+if(BACKEND_FORMAT STREQUAL "hdf5")
+  set(observed "${OUTPUT_DIR}/${fixture_name}.observed")
+else()
+  set(observed "${OUTPUT_DIR}/${fixture_name}.${BACKEND_FORMAT}.observed")
+endif()
 
 execute_process(
   COMMAND
     "${H5CPP_BIN}"
+    "--${BACKEND_FORMAT}"
     -o "${observed}"
     "${FIXTURE}"
     --
@@ -35,7 +46,7 @@ execute_process(
 
 if(NOT rc EQUAL 0)
   message(FATAL_ERROR
-    "h5cpp exit ${rc} on ${fixture_name}\n"
+    "h5cpp exit ${rc} on ${fixture_name} (format=${BACKEND_FORMAT})\n"
     "--- stdout ---\n${tool_stdout}\n"
     "--- stderr ---\n${tool_stderr}")
 endif()
@@ -55,7 +66,7 @@ if(EXISTS "${GOLDEN}")
   file(READ "${GOLDEN}" expected)
   if(NOT "${content}" STREQUAL "${expected}")
     message(FATAL_ERROR
-      "Golden mismatch for ${fixture_name}\n"
+      "Golden mismatch for ${fixture_name} (format=${BACKEND_FORMAT})\n"
       "  observed: ${observed}\n"
       "  golden:   ${GOLDEN}\n"
       "Refresh by copying observed over golden after manual review.")
