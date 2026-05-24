@@ -40,6 +40,13 @@ inline bool is_h5_attr_name(llvm::StringRef name) {
         || name == "serialize_full";
 }
 
+inline bool is_json_attr_name(llvm::StringRef name) {
+    return name == "name"      || name == "ignore"      || name == "doc"
+        || name == "alias"     || name == "version"     || name == "name_all"
+        || name == "required"  || name == "format"      || name == "pattern"
+        || name == "min"       || name == "max"         || name == "tool_format";
+}
+
 // Skip whitespace and comments at position `i` in `src`. Returns the new
 // position. Comments are emitted to `out` verbatim.
 inline std::size_t skip_ws(llvm::StringRef src, std::size_t i, std::string& out) {
@@ -146,8 +153,10 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     llvm::StringRef leading = spec.substr(0, start);
     llvm::StringRef body    = spec.substr(start);
 
-    constexpr llvm::StringRef ns = "h5::";
-    if (!body.starts_with(ns)) return spec.str();
+    bool is_h5  = body.starts_with("h5::");
+    bool is_json = body.starts_with("json::");
+    if (!is_h5 && !is_json) return spec.str();
+    llvm::StringRef ns = is_h5 ? "h5::" : "json::";
 
     body = body.drop_front(ns.size());
     std::size_t i = 0;
@@ -155,14 +164,16 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
            && (std::isalnum(static_cast<unsigned char>(body[i])) || body[i] == '_')) ++i;
     if (i == 0) return spec.str();
     llvm::StringRef name = body.substr(0, i);
-    if (!is_h5_attr_name(name)) return spec.str();
+    if (is_h5 && !is_h5_attr_name(name)) return spec.str();
+    if (is_json && !is_json_attr_name(name)) return spec.str();
 
     while (i < body.size() && std::isspace(static_cast<unsigned char>(body[i]))) ++i;
 
     std::string out;
     out.append(leading.str());
     if (i >= body.size() || body[i] != '(') {
-        out.append("clang::annotate(\"h5::");
+        out.append("clang::annotate(\"");
+        out.append(ns.str());
         out.append(name.str());
         out.append("\")");
         out.append(body.substr(i).str());
@@ -171,7 +182,8 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     std::size_t paren_end = find_matching_paren(body, i);
     if (paren_end == i) return spec.str();
     llvm::StringRef args_inside = body.substr(i + 1, paren_end - i - 1);
-    out.append("clang::annotate(\"h5::");
+    out.append("clang::annotate(\"");
+    out.append(ns.str());
     out.append(name.str());
     out.append("\"");
     if (!args_inside.trim().empty()) {
@@ -223,7 +235,7 @@ inline std::string rewrite(llvm::StringRef src) {
                 continue;
             }
             llvm::StringRef block = src.substr(i + 2, close - i - 2);
-            if (block.contains("h5::")) {
+            if (block.contains("h5::") || block.contains("json::")) {
                 auto attrs = split_attrs(block);
                 out.append("[[");
                 for (std::size_t k = 0; k < attrs.size(); ++k) {
@@ -256,7 +268,7 @@ inline void install_virtual_files(clang::tooling::ClangTool& Tool,
     for (const auto& p : paths) {
         std::string content = read_file(p);
         if (content.empty()) continue;
-        if (content.find("h5::") == std::string::npos) continue;
+        if (content.find("h5::") == std::string::npos && content.find("json::") == std::string::npos) continue;
         storage.push_back(rewrite(content));
         Tool.mapVirtualFile(p, storage.back());
     }

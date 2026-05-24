@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "",
+  "title": "sn::typecheck::Record",
+  "description": "Array types test",
+  "$defs": {
+    "sn::typecheck::Inner": {
+      "type": "object",
+      "properties": {
+        "value": {"type": "integer"}
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "int_vec": {"type": "array", "items": {"type": "integer"}},
+    "int_arr": {"type": "array", "items": {"type": "integer"}},
+    "inner_vec": {"type": "array", "items": {"$ref": "#/$defs/sn::typecheck::Inner"}},
+    "inner_arr": {"type": "array", "items": {"$ref": "#/$defs/sn::typecheck::Inner"}}
+  }
+}
