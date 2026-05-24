@@ -16,6 +16,22 @@ set(FIXTURES
   inheritance
 )
 
+function(add_h5cpp_backend_fixture_test name backend)
+  set(golden "${GOLDEN_DIR}/${name}.${backend}.expected")
+  add_test(
+    NAME h5cpp.${name}
+    COMMAND
+      ${CMAKE_COMMAND}
+        "-DH5CPP_BIN=$<TARGET_FILE:h5cpp>"
+        "-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/${name}.cpp"
+        "-DSTUB_DIR=${STUB_DIR}"
+        "-DGOLDEN=${golden}"
+        "-DBACKEND_FORMAT=${backend}"
+        "-DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+        -P "${RUN_FIXTURE}"
+  )
+endfunction()
+
 function(add_h5cpp_fixture_test name)
   add_test(
     NAME h5cpp.${name}
@@ -32,4 +48,18 @@ endfunction()
 
 foreach(fixture IN LISTS FIXTURES)
   add_h5cpp_fixture_test(${fixture})
+endforeach()
+
+set(MSGPACK_FIXTURES
+  msgpack_primitives
+  msgpack_arrays
+  msgpack_maps
+  msgpack_nested
+  msgpack_optionals
+  msgpack_strings
+  msgpack_ext
+)
+
+foreach(fixture IN LISTS MSGPACK_FIXTURES)
+  add_h5cpp_backend_fixture_test(${fixture} msgpack)
 endforeach()
