@@ -30,6 +30,27 @@ function(add_h5cpp_fixture_test name)
   )
 endfunction()
 
+function(add_h5cpp_backend_test name backend)
+  add_test(
+    NAME h5cpp.${name}.${backend}
+    COMMAND
+      ${CMAKE_COMMAND}
+        "-DH5CPP_BIN=$<TARGET_FILE:h5cpp>"
+        "-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/${name}.cpp"
+        "-DSTUB_DIR=${STUB_DIR}"
+        "-DGOLDEN=${GOLDEN_DIR}/${name}.${backend}.expected"
+        "-DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+        "-DBACKEND_FORMAT=${backend}"
+        -P "${RUN_FIXTURE}"
+  )
+endfunction()
+
 foreach(fixture IN LISTS FIXTURES)
   add_h5cpp_fixture_test(${fixture})
+endforeach()
+
+foreach(fixture IN LISTS FIXTURES)
+  add_h5cpp_backend_test(${fixture} sql-postgres)
+  add_h5cpp_backend_test(${fixture} sql-mysql)
+  add_h5cpp_backend_test(${fixture} sql-lite3)
 endforeach()
