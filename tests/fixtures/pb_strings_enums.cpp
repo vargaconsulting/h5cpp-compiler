@@ -17,10 +17,10 @@ enum class severity_e : std::int32_t {
 };
 
 struct log_entry_t {
-    [[clang::annotate("pb::field=1")]] std::int64_t timestamp_ns;
-    [[clang::annotate("pb::field=2")]] std::string  message;
-    [[clang::annotate("pb::field=3")]] severity_e   level;
-    [[clang::annotate("pb::field=4")]] double       elapsed_ms;
+    [[pb::field(1)]] std::int64_t timestamp_ns;
+    [[pb::field(2)]] std::string  message;
+    [[pb::field(3)]] severity_e   level;
+    [[pb::field(4)]] double       elapsed_ms;
 };
 
 } // namespace sn::pb_test

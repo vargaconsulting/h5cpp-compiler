@@ -32,6 +32,11 @@ endfunction()
 
 function(add_h5cpp_backend_fixture_test name backend)
   set(golden "${GOLDEN_DIR}/${name}.${backend}.expected")
+  set(proto_golden "${GOLDEN_DIR}/${name}.proto.expected")
+  set(proto_arg "")
+  if(EXISTS "${proto_golden}")
+    set(proto_arg "-DPROTO_GOLDEN=${proto_golden}")
+  endif()
   add_test(
     NAME h5cpp.${name}
     COMMAND
@@ -42,6 +47,7 @@ function(add_h5cpp_backend_fixture_test name backend)
         "-DGOLDEN=${golden}"
         "-DBACKEND_FORMAT=${backend}"
         "-DOUTPUT_DIR=${CMAKE_CURRENT_BINARY_DIR}"
+        ${proto_arg}
         -P "${RUN_FIXTURE}"
   )
 endfunction()
@@ -57,6 +63,14 @@ set(PB_FIXTURES
   pb_variant
   pb_wire_specs
   pb_chrono
+  pb_enum_tag
+  pb_ignore
+  pb_universals
+  pb_tier2
+  pb_enum_decl
+  pb_tier3a
+  pb_service
+  pb_clean_form
 )
 
 foreach(fixture IN LISTS PB_FIXTURES)

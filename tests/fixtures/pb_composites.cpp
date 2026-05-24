@@ -15,11 +15,11 @@
 namespace sn::pb_test {
 
 struct profile_t {
-    [[clang::annotate("pb::field=1")]] std::string                  name;
-    [[clang::annotate("pb::field=2")]] std::vector<std::int32_t>    scores;
-    [[clang::annotate("pb::field=3")]] std::optional<std::string>   nickname;
-    [[clang::annotate("pb::field=4")]] std::vector<std::string>     aliases;
-    [[clang::annotate("pb::field=5")]] std::optional<std::int64_t>  user_id;
+    [[pb::field(1)]] std::string                  name;
+    [[pb::field(2)]] std::vector<std::int32_t>    scores;
+    [[pb::field(3)]] std::optional<std::string>   nickname;
+    [[pb::field(4)]] std::vector<std::string>     aliases;
+    [[pb::field(5)]] std::optional<std::int64_t>  user_id;
 };
 
 } // namespace sn::pb_test
