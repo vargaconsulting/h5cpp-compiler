@@ -17,6 +17,7 @@
 
 #include "producer_h5.hpp"
 #include "consumer.hpp"
+#include "consumer_rlp.hpp"
 #include "h5_attr_translator.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
@@ -136,10 +137,12 @@ int main(int argc, const char **argv) {
 				llvm::errs() << "h5cpp-compiler: --format avro not yet implemented\n";
 				rc = 1;
 				break;
-			case OutputFormat::rlp:
-				llvm::errs() << "h5cpp-compiler: --format rlp not yet implemented\n";
-				rc = 1;
+			case OutputFormat::rlp: {
+				RlpTemplateCallback callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
+			}
 		}
 	}
 
