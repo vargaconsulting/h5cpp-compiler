@@ -115,3 +115,17 @@ set(CBOR_FIXTURES
 foreach(fixture IN LISTS CBOR_FIXTURES)
   add_h5cpp_backend_fixture_test(${fixture} cbor)
 endforeach()
+
+set(BSON_FIXTURES
+  bson_primitives
+  bson_arrays
+  bson_nested
+  bson_strings
+  bson_binary
+  bson_datetime
+  bson_decimal
+)
+
+foreach(fixture IN LISTS BSON_FIXTURES)
+  add_h5cpp_backend_fixture_test(${fixture} bson)
+endforeach()
