@@ -20,6 +20,7 @@
 #include "h5_attr_translator.hpp"
 #include "consumer_json.hpp"
 #include "consumer_msgpack.hpp"
+#include "consumer_cbor.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
 	clang::ast_matchers::hasDescendant( clang::ast_matchers::declRefExpr( clang::ast_matchers::to( clang::ast_matchers::varDecl().bind("variableDecl")  ) ) ),
@@ -135,7 +136,12 @@ int main(int argc, const char **argv) {
 			}
 				llvm::errs() << "h5cpp-compiler: --format cbor not yet implemented\n";
 				rc = 1;
+			case OutputFormat::cbor: {
+				CborTemplateCallback callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
+			}
 			case OutputFormat::bson:
 				llvm::errs() << "h5cpp-compiler: --format bson not yet implemented\n";
 				rc = 1;

@@ -52,6 +52,11 @@ inline bool is_msgpack_attr_name(llvm::StringRef name) {
         || name == "alias"     || name == "required"    || name == "ext";
 }
 
+inline bool is_cbor_attr_name(llvm::StringRef name) {
+    return name == "name"      || name == "ignore"      || name == "doc"
+        || name == "alias"     || name == "required"    || name == "tag";
+}
+
 // Skip whitespace and comments at position `i` in `src`. Returns the new
 // position. Comments are emitted to `out` verbatim.
 inline std::size_t skip_ws(llvm::StringRef src, std::size_t i, std::string& out) {
@@ -167,6 +172,10 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     if (!is_h5 && !is_msgpack) return spec.str();
     llvm::StringRef ns = is_h5 ? "h5::" : "msgpack::";
     if (!body.starts_with(ns)) return spec.str();
+    bool is_h5  = body.starts_with("h5::");
+    bool is_cbor = body.starts_with("cbor::");
+    if (!is_h5 && !is_cbor) return spec.str();
+    llvm::StringRef ns = is_h5 ? "h5::" : "cbor::";
 
     body = body.drop_front(ns.size());
     std::size_t i = 0;
@@ -178,6 +187,8 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     if (is_json && !is_json_attr_name(name)) return spec.str();
     if (is_h5 && !is_h5_attr_name(name)) return spec.str();
     if (is_msgpack && !is_msgpack_attr_name(name)) return spec.str();
+    if (is_h5 && !is_h5_attr_name(name)) return spec.str();
+    if (is_cbor && !is_cbor_attr_name(name)) return spec.str();
 
     while (i < body.size() && std::isspace(static_cast<unsigned char>(body[i]))) ++i;
 
@@ -249,6 +260,7 @@ inline std::string rewrite(llvm::StringRef src) {
             llvm::StringRef block = src.substr(i + 2, close - i - 2);
             if (block.contains("h5::") || block.contains("json::")) {
             if (block.contains("h5::") || block.contains("msgpack::")) {
+            if (block.contains("h5::") || block.contains("cbor::")) {
                 auto attrs = split_attrs(block);
                 out.append("[[");
                 for (std::size_t k = 0; k < attrs.size(); ++k) {
@@ -283,6 +295,7 @@ inline void install_virtual_files(clang::tooling::ClangTool& Tool,
         if (content.empty()) continue;
         if (content.find("h5::") == std::string::npos && content.find("json::") == std::string::npos) continue;
         if (content.find("h5::") == std::string::npos && content.find("msgpack::") == std::string::npos) continue;
+        if (content.find("h5::") == std::string::npos && content.find("cbor::") == std::string::npos) continue;
         storage.push_back(rewrite(content));
         Tool.mapVirtualFile(p, storage.back());
     }

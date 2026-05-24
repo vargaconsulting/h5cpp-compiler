@@ -102,3 +102,16 @@ set(MSGPACK_FIXTURES
 foreach(fixture IN LISTS MSGPACK_FIXTURES)
   add_h5cpp_backend_fixture_test(${fixture} msgpack)
 endforeach()
+
+set(CBOR_FIXTURES
+  cbor_primitives
+  cbor_arrays
+  cbor_nested
+  cbor_tags
+  cbor_optionals
+  cbor_strings
+)
+
+foreach(fixture IN LISTS CBOR_FIXTURES)
+  add_h5cpp_backend_fixture_test(${fixture} cbor)
+endforeach()
