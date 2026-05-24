@@ -123,4 +123,9 @@ read_class_int(const clang::CXXRecordDecl* rec, llvm::StringRef kind) {
     return read_int_arg(find_annotate(rec, kind), rec->getASTContext());
 }
 
+inline std::vector<std::string>
+read_class_strings(const clang::CXXRecordDecl* rec, llvm::StringRef kind) {
+    return read_string_args(find_annotate(rec, kind));
+}
+
 } // namespace h5_attr_reader

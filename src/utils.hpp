@@ -13,6 +13,9 @@ namespace utils {
 
 	inline std::string get_type_name(const clang::QualType& qt );
 	enum class type{ builtin, array, record, invalid };
+	enum class tier { pod, scatter, invalid };
+
+	template <typename T, typename F> T as( F );
 
 	// Issue #32: detect std::vector<T> in Clang AST
 	inline bool is_vector_type(const clang::QualType& qt) {
@@ -46,11 +49,40 @@ namespace utils {
 		return clang::QualType();
 	}
 
+	// Issue #32: classify a struct into tier 1 (POD) or tier 2 (scatter)
+	inline tier determine_tier(const clang::CXXRecordDecl* node) {
+		bool has_scatter_field = false;
+		for (clang::FieldDecl* fld : node->fields()) {
+			clang::QualType qt = fld->getType();
+			const clang::Type* tp = qt.getTypePtrOrNull();
+			if (!tp) return tier::invalid;
+
+			if (is_vector_type(qt) || is_string_type(qt)) {
+				has_scatter_field = true;
+				// For vectors, ensure element type is scalar/POD
+				if (is_vector_type(qt)) {
+					clang::QualType et = get_vector_element_type(qt);
+					const clang::Type* etp = et.getTypePtrOrNull();
+					if (!etp || !(etp->isBuiltinType() || etp->isEnumeralType()))
+						return tier::invalid; // vector of non-scalar not yet supported
+				}
+				continue;
+			}
+
+			// Check if field is POD scalar, array, or record
+			if (tp->isBuiltinType() || tp->isEnumeralType()) continue;
+			if (tp->isConstantArrayType()) continue;
+			if (tp->isRecordType() && qt->getAsCXXRecordDecl()->isPOD()) continue;
+
+			return tier::invalid; // unsupported field type
+		}
+		return has_scatter_field ? tier::scatter : tier::pod;
+	}
+
 	template <typename T> uint64_t size( const T* ptr );
 	template <typename T> std::string type_name( const T* ptr );
 	template <typename T> std::string name( const T* ptr );
 	template <typename T> std::string element_type_name( const T* ptr );
-	template <typename T, typename F> T as( F );
 
 	template <> inline std::string type_name( const clang::CXXRecordDecl* ptr ){
    		 return ptr->getQualifiedNameAsString();
