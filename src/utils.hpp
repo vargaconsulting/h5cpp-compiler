@@ -14,6 +14,38 @@ namespace utils {
 	inline std::string get_type_name(const clang::QualType& qt );
 	enum class type{ builtin, array, record, invalid };
 
+	// Issue #32: detect std::vector<T> in Clang AST
+	inline bool is_vector_type(const clang::QualType& qt) {
+		const clang::Type* tp = qt.getTypePtrOrNull();
+		if (!tp) return false;
+		if (const auto* tst = tp->getAs<clang::TemplateSpecializationType>()) {
+			if (const auto* td = tst->getTemplateName().getAsTemplateDecl()) {
+				return td->getNameAsString() == "vector";
+			}
+		}
+		return false;
+	}
+
+	// Issue #32: detect std::string (std::basic_string<char>)
+	inline bool is_string_type(const clang::QualType& qt) {
+		const clang::Type* tp = qt.getTypePtrOrNull();
+		if (!tp) return false;
+		std::string name = qt.getAsString();
+		return name == "std::string" || name == "std::basic_string<char>" ||
+		       name.find("std::basic_string<char,") == 0;
+	}
+
+	// Issue #32: get element type of std::vector<T>
+	inline clang::QualType get_vector_element_type(const clang::QualType& qt) {
+		const clang::Type* tp = qt.getTypePtrOrNull();
+		if (const auto* tst = tp->getAs<clang::TemplateSpecializationType>()) {
+			auto args = tst->template_arguments();
+			if (!args.empty() && args[0].getKind() == clang::TemplateArgument::Type)
+				return args[0].getAsType();
+		}
+		return clang::QualType();
+	}
+
 	template <typename T> uint64_t size( const T* ptr );
 	template <typename T> std::string type_name( const T* ptr );
 	template <typename T> std::string name( const T* ptr );
@@ -64,6 +96,7 @@ namespace utils {
 		const clang::Type* tp = qt.getTypePtrOrNull();
 		if( tp->isConstantArrayType() )	return type::array;
 		else if( tp->isBuiltinType() ) return type::builtin;
+		else if( tp->isEnumeralType() ) return type::builtin;
 		else if( tp->isRecordType() &&
 			as<const clang::CXXRecordDecl*>(qt)->isPOD() ) return type::record;
 		else
@@ -86,6 +119,10 @@ namespace utils {
 		if( tp->isBuiltinType() ){
 			clang::QualType dqt = qt->getCanonicalTypeInternal();
 			return dqt.getAsString();
+		} else if( tp->isEnumeralType() ) {
+			if( const auto* et = tp->getAs<clang::EnumType>() )
+				return get_type_name( et->getDecl()->getIntegerType() );
+			return "int";
 		} else if( tp->isRecordType() ){
 			clang::CXXRecordDecl* node = tp->getAsCXXRecordDecl();
 			return type_name( node );
