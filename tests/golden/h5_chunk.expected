@@ -1,0 +1,77 @@
+#pragma once
+
+#include <hdf5.h>
+#include <h5cpp/all>
+
+namespace h5::generated::sn__sensor__chunked_t_ {
+
+struct row_t {
+    unsigned long long timestamp_ns;
+    hvl_t    samples;
+};
+
+inline hid_t compound_type() {
+    static const hid_t ct = []{
+        hid_t v_samples = H5Tvlen_create(H5T_NATIVE_DOUBLE);
+        hid_t ct = H5Tcreate(H5T_COMPOUND, sizeof(row_t));
+        H5Tinsert(ct, "timestamp_ns", HOFFSET(row_t, timestamp_ns), H5T_NATIVE_ULLONG);
+        H5Tinsert(ct, "samples", HOFFSET(row_t, samples), v_samples);
+        return ct;
+    }();
+    return ct;
+}
+
+} // namespace h5::generated::sn__sensor__chunked_t_
+
+namespace h5 {
+template<> inline h5::ds_t scatter<sn::sensor::chunked_t>(
+    hid_t fd, const std::string& path, const sn::sensor::chunked_t& obj) {
+    using namespace ::h5::generated::sn__sensor__chunked_t_;
+    h5::ds_t ds;
+    h5::mute();
+    bool exists = H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0;
+    h5::unmute();
+    if (exists) {
+        ds = h5::open(fd, path, h5::default_dapl);
+    } else {
+        h5::dcpl_t dcpl{H5Pcreate(H5P_DATASET_CREATE)};
+        hsize_t chunk = 256;
+        H5Pset_chunk(dcpl, 1, &chunk);
+        hsize_t cur = 0;
+        hsize_t max = H5S_UNLIMITED;
+        hid_t space = H5Screate_simple(1, &cur, &max);
+        ds = h5::createds(fd, path, compound_type(), h5::sp_t{space},
+            h5::default_lcpl, dcpl, h5::default_dapl);
+    }
+    hsize_t row = h5::detail::next_row(ds);
+    hsize_t samples_len = obj.samples.size();
+    auto* samples_ptr = obj.samples.data();
+    row_t r{
+        obj.timestamp_ns,
+        hvl_t{samples_len, (void*)samples_ptr}
+    };
+    herr_t err = h5::detail::write_one_row(ds, compound_type(), row, &r);
+    (void)err;
+    return ds;
+}
+} // namespace h5
+
+namespace h5 {
+template<> inline void gather<sn::sensor::chunked_t>(
+    hid_t fd, const std::string& path, sn::sensor::chunked_t& obj) {
+    using namespace ::h5::generated::sn__sensor__chunked_t_;
+    h5::ds_t ds = h5::open(fd, path, h5::default_dapl);
+    hsize_t nrows = h5::detail::next_row(ds);
+    if (nrows == 0) return;
+    row_t r{};
+    herr_t err = h5::detail::read_one_row(ds, compound_type(), nrows - 1, &r);
+    (void)err;
+    obj.timestamp_ns = r.timestamp_ns;
+    obj.samples.assign(static_cast<double*>(r.samples.p), static_cast<double*>(r.samples.p) + r.samples.len);
+    H5Treclaim(compound_type(), H5S_ALL, H5P_DEFAULT, &r);
+}
+} // namespace h5
+
+H5CPP_REGISTER_SCATTER(sn::sensor::chunked_t);
+
+

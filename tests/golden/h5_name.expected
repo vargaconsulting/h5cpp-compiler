@@ -1,0 +1,20 @@
+#pragma once
+
+#include <hdf5.h>
+#include <h5cpp/all>
+
+namespace h5 {
+    template<> hid_t inline register_struct<sensor_reading_t>(){
+
+        hid_t ct_00 = H5Tcreate(H5T_COMPOUND, sizeof (sensor_reading_t));
+        H5Tinsert(ct_00, "timestamp_ns",	HOFFSET(sensor_reading_t,timestamp_ns),H5T_NATIVE_ULLONG);
+        H5Tinsert(ct_00, "temp_K",	HOFFSET(sensor_reading_t,temperature),H5T_NATIVE_DOUBLE);
+        H5Tinsert(ct_00, "pressure_Pa",	HOFFSET(sensor_reading_t,pressure),H5T_NATIVE_FLOAT);
+        H5Tinsert(ct_00, "flags",	HOFFSET(sensor_reading_t,flags),H5T_NATIVE_INT);
+
+        return ct_00;
+    };
+}
+H5CPP_REGISTER_STRUCT(sensor_reading_t);
+
+

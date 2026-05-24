@@ -1,0 +1,18 @@
+#pragma once
+
+#include <hdf5.h>
+#include <h5cpp/all>
+
+namespace h5 {
+    template<> hid_t inline register_struct<session_t>(){
+
+        hid_t ct_00 = H5Tcreate(H5T_COMPOUND, sizeof (session_t));
+        H5Tinsert(ct_00, "id",	HOFFSET(session_t,id),H5T_NATIVE_ULLONG);
+        H5Tinsert(ct_00, "temperature",	HOFFSET(session_t,temperature),H5T_NATIVE_DOUBLE);
+
+        return ct_00;
+    };
+}
+H5CPP_REGISTER_STRUCT(session_t);
+
+

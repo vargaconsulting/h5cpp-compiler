@@ -14,6 +14,17 @@ set(FIXTURES
   enum-member
   multi-array
   inheritance
+  h5_name
+  h5_ignore
+  h5_scatter
+  h5_scatter_attrs
+  h5_chunk
+  h5_compress
+  h5_chunk_compress
+  h5_metadata
+  h5_name_all
+  h5_serialize_full
+  h5_on_missing
 )
 
 function(add_h5cpp_fixture_test name)
