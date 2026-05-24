@@ -129,3 +129,17 @@ set(BSON_FIXTURES
 foreach(fixture IN LISTS BSON_FIXTURES)
   add_h5cpp_backend_fixture_test(${fixture} bson)
 endforeach()
+
+set(AVRO_FIXTURES
+  avro_primitives
+  avro_arrays
+  avro_nested
+  avro_strings
+  avro_datetime
+  avro_decimal
+  avro_fixed
+)
+
+foreach(fixture IN LISTS AVRO_FIXTURES)
+  add_h5cpp_backend_fixture_test(${fixture} avro)
+endforeach()

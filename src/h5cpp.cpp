@@ -18,6 +18,7 @@
 #include "producer_h5.hpp"
 #include "consumer.hpp"
 #include "consumer_bson.hpp"
+#include "consumer_avro.hpp"
 #include "h5_attr_translator.hpp"
 #include "consumer_json.hpp"
 #include "consumer_msgpack.hpp"
@@ -155,7 +156,12 @@ int main(int argc, const char **argv) {
 			case OutputFormat::avro:
 				llvm::errs() << "h5cpp-compiler: --format avro not yet implemented\n";
 				rc = 1;
+			case OutputFormat::avro: {
+				AvroTemplateCallback callback(work_path);
+				Finder.addMatcher(h5templateMatcher, &callback);
+				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
+			}
 			case OutputFormat::rlp:
 				llvm::errs() << "h5cpp-compiler: --format rlp not yet implemented\n";
 				rc = 1;

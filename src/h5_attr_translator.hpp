@@ -63,6 +63,13 @@ inline bool is_bson_attr_name(llvm::StringRef name) {
         || name == "decimal"   || name == "timestamp"   || name == "binary";
 }
 
+inline bool is_avro_attr_name(llvm::StringRef name) {
+    return name == "name"      || name == "ignore"      || name == "doc"
+        || name == "alias"     || name == "required"    || name == "datetime"
+        || name == "timestamp" || name == "decimal"     || name == "fixed"
+        || name == "uuid"      || name == "date"        || name == "time";
+}
+
 // Skip whitespace and comments at position `i` in `src`. Returns the new
 // position. Comments are emitted to `out` verbatim.
 inline std::size_t skip_ws(llvm::StringRef src, std::size_t i, std::string& out) {
@@ -186,6 +193,10 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     bool is_bson = body.starts_with("bson::");
     if (!is_h5 && !is_bson) return spec.str();
     llvm::StringRef ns = is_h5 ? "h5::" : "bson::";
+    bool is_h5   = body.starts_with("h5::");
+    bool is_avro = body.starts_with("avro::");
+    if (!is_h5 && !is_avro) return spec.str();
+    llvm::StringRef ns = is_h5 ? "h5::" : "avro::";
 
     body = body.drop_front(ns.size());
     std::size_t i = 0;
@@ -201,6 +212,8 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
     if (is_cbor && !is_cbor_attr_name(name)) return spec.str();
     if (is_h5 && !is_h5_attr_name(name)) return spec.str();
     if (is_bson && !is_bson_attr_name(name)) return spec.str();
+    if (is_h5 && !is_h5_attr_name(name)) return spec.str();
+    if (is_avro && !is_avro_attr_name(name)) return spec.str();
 
     while (i < body.size() && std::isspace(static_cast<unsigned char>(body[i]))) ++i;
 
@@ -274,6 +287,7 @@ inline std::string rewrite(llvm::StringRef src) {
             if (block.contains("h5::") || block.contains("msgpack::")) {
             if (block.contains("h5::") || block.contains("cbor::")) {
             if (block.contains("h5::") || block.contains("bson::")) {
+            if (block.contains("h5::") || block.contains("avro::")) {
                 auto attrs = split_attrs(block);
                 out.append("[[");
                 for (std::size_t k = 0; k < attrs.size(); ++k) {
@@ -310,6 +324,7 @@ inline void install_virtual_files(clang::tooling::ClangTool& Tool,
         if (content.find("h5::") == std::string::npos && content.find("msgpack::") == std::string::npos) continue;
         if (content.find("h5::") == std::string::npos && content.find("cbor::") == std::string::npos) continue;
         if (content.find("h5::") == std::string::npos && content.find("bson::") == std::string::npos) continue;
+        if (content.find("h5::") == std::string::npos && content.find("avro::") == std::string::npos) continue;
         storage.push_back(rewrite(content));
         Tool.mapVirtualFile(p, storage.back());
     }
