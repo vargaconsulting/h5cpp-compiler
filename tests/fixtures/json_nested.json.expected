@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "",
+  "title": "Outer",
+  "description": "Nested struct test",
+  "$defs": {
+    "sn::typecheck::Inner": {
+      "type": "object",
+      "description": "Inner nested struct",
+      "properties": {
+        "value": {"type": "integer"}
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "inner": {"$ref": "#/$defs/sn::typecheck::Inner"},
+    "plain": {"type": "integer"}
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "",
+  "title": "Primitives",
+  "description": "Primitive type test",
+  "type": "object",
+  "properties": {
+    "_char": {"type": "integer"},
+    "_uchar": {"type": "integer"},
+    "_short": {"type": "integer"},
+    "_int": {"type": "integer", "format": "int32"},
+    "_float": {"type": "number"},
+    "_double": {"type": "number"},
+    "_bool": {"type": "boolean"}
+  },
+  "required": ["_char", "_double"]
+}
