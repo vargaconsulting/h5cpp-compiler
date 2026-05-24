@@ -248,7 +248,7 @@ private:
 
 	static bool is_chrono_time_point_(const clang::QualType& qt) {
 		std::string name = qt.getAsString();
-		return name.find("std::chrono::time_point") == 0 || name.find("time_point<") != std::string::npos;
+		return name.find("std::chrono::") != std::string::npos && name.find("time_point") != std::string::npos;
 	}
 
 	// ── type name for emitted code ──

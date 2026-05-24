@@ -39,24 +39,6 @@ struct descriptor {
 
 } // namespace bson::meta
 
-// descriptor for std::chrono::duration
-template<>
-struct descriptor<std::chrono::duration> {
-    static constexpr field_desc fields[] = {
-        { "__r", bson_type_t::int64, 0, offsetof(std::chrono::duration, __r), false, nullptr, nullptr, nullptr, nullptr }
-    };
-    static constexpr std::size_t field_count = 1;
-};
-
-// descriptor for std::chrono::time_point
-template<>
-struct descriptor<std::chrono::time_point> {
-    static constexpr field_desc fields[] = {
-        { "__d", bson_type_t::document, 0, offsetof(std::chrono::time_point, __d), false, nullptr, nullptr, nullptr, nullptr }
-    };
-    static constexpr std::size_t field_count = 1;
-};
-
 // descriptor for sn::typecheck::Record
 template<>
 struct descriptor<sn::typecheck::Record> {

@@ -2,22 +2,28 @@
 
 #pragma once
 
-// Issue #32 — source-level translator for the clean `[[h5::xxx(...)]]`
+// Issue #31 Phase 1b — source-level translator for the clean `[[pb::xxx(...)]]`
 // attribute syntax.
 //
 // Clang 20's standard-attribute parser drops the argument list for plugin-
 // registered namespace-scoped attributes when they use C++11 `[[ns::name(...)]]`
-// syntax. To deliver the clean user-facing surface, h5cpp-compiler rewrites the
+// syntax (the args are parsed for `__attribute__((name(...)))` GNU syntax, but
+// not for the C++11 form — empirically verified against ParsedAttrInfo plugins).
+// To deliver the clean user-facing surface anyway, h5cpp-compiler rewrites the
 // source before handing it to Clang Tooling:
 //
-//     [[h5::name("x")]]      →  [[clang::annotate("h5::name", "x")]]
-//     [[h5::ignore]]         →  [[clang::annotate("h5::ignore")]]
-//     [[h5::chunk(1024)]]    →  [[clang::annotate("h5::chunk", 1024)]]
-//     [[h5::compress(gzip, 6)]]
-//                            →  [[clang::annotate("h5::compress", gzip, 6)]]
+//     [[pb::field(N)]]       →  [[clang::annotate("pb::field", N)]]
+//     [[pb::wire(sint32)]]   →  [[clang::annotate("pb::wire", sint32)]]
+//     [[pb::adapter("Ts")]]  →  [[clang::annotate("pb::adapter", "Ts")]]
+//     [[pb::ignore]]         →  [[clang::annotate("pb::ignore")]]
+//     [[pb::field(a), pb::adapter("X")]]
+//                            →  [[clang::annotate("pb::field", a),
+//                                  clang::annotate("pb::adapter", "X")]]
 //
 // The rewritten source goes through Clang as a standard `clang::annotate`
-// annotation. The user only ever sees the clean syntax; the wrapper is internal.
+// annotation, whose Phase 1a multi-arg form is already understood by
+// consumer_pb.hpp. The user only ever sees the clean syntax; the wrapper is
+// internal.
 
 #include <clang/Tooling/Tooling.h>
 #include <llvm/ADT/SmallVector.h>
@@ -29,52 +35,28 @@
 #include <string>
 #include <vector>
 
-namespace h5_attr_translator {
+namespace pb_attr_translator {
 
-// Identifiers we recognize after `h5::` inside an attribute. Anything else
+// Identifiers we recognize after `pb::` inside an attribute. Anything else
 // is left verbatim so user code can carry unrelated attributes alongside.
-inline bool is_h5_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "chunk"
-        || name == "compress"  || name == "doc"         || name == "on_missing"
-        || name == "alias"     || name == "version"     || name == "name_all"
-        || name == "serialize_full";
-}
-
-inline bool is_json_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "doc"
-        || name == "alias"     || name == "required"    || name == "type";
-}
-
-inline bool is_msgpack_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "doc"
-        || name == "alias"     || name == "required"    || name == "ext";
-}
-
-inline bool is_cbor_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "doc"
-        || name == "alias"     || name == "required"    || name == "tag";
-}
-
-inline bool is_bson_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "doc"
-        || name == "alias"     || name == "required"    || name == "datetime"
-        || name == "decimal"   || name == "timestamp"   || name == "binary";
-}
-
-inline bool is_avro_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "doc"
-        || name == "alias"     || name == "required"    || name == "datetime"
-        || name == "timestamp" || name == "decimal"     || name == "fixed"
-        || name == "uuid"      || name == "date"        || name == "time";
-}
-
-inline bool is_rlp_attr_name(llvm::StringRef name) {
-    return name == "name"      || name == "ignore"      || name == "doc"
-        || name == "alias"     || name == "required"    || name == "timestamp";
+inline bool is_pb_attr_name(llvm::StringRef name) {
+    return name == "field"  || name == "wire"       || name == "adapter"
+        || name == "ignore" || name == "oneof_name" || name == "enum_zero"
+        // Future-proof: add new universal/tier-2/tier-3 names here as they
+        // ship. The taxonomy doc §3-§4 has the full list.
+        || name == "name"   || name == "doc"        || name == "alias"
+        || name == "version"|| name == "name_all"   || name == "on_missing"
+        || name == "reserved" || name == "packed"   || name == "deprecated"
+        || name == "package"|| name == "json_name"
+        || name == "unknown_field_set" || name == "target_syntax"
+        || name == "descriptor_set_out"|| name == "service"
+        || name == "encode_with" || name == "decode_with"
+        || name == "tier"  || name == "reject";
 }
 
 // Skip whitespace and comments at position `i` in `src`. Returns the new
-// position. Comments are emitted to `out` verbatim.
+// position. Comments are emitted to `out` verbatim — diagnostics keep their
+// source locations roughly aligned.
 inline std::size_t skip_ws(llvm::StringRef src, std::size_t i, std::string& out) {
     while (i < src.size()) {
         char c = src[i];
@@ -93,6 +75,17 @@ inline std::size_t skip_ws(llvm::StringRef src, std::size_t i, std::string& out)
         }
     }
     return i;
+}
+
+// Try to match an identifier at position `i`; returns the identifier text and
+// advances `i` past it. Empty StringRef if not an identifier start.
+inline llvm::StringRef read_identifier(llvm::StringRef src, std::size_t& i) {
+    auto is_id_start = [](char c){ return (c == '_') || std::isalpha(static_cast<unsigned char>(c)); };
+    auto is_id_cont  = [](char c){ return (c == '_') || std::isalnum(static_cast<unsigned char>(c)); };
+    if (i >= src.size() || !is_id_start(src[i])) return {};
+    std::size_t start = i;
+    while (i < src.size() && is_id_cont(src[i])) ++i;
+    return src.substr(start, i - start);
 }
 
 // Find the position of the closing `)` matching the `(` at `start`. Returns
@@ -120,6 +113,8 @@ inline std::size_t find_matching_paren(llvm::StringRef src, std::size_t start) {
 }
 
 // Find the matching `]]` for the `[[` at `start`. Returns `start` on failure.
+// Respects nested parens (attribute args may contain `]` inside template
+// argument lists or array subscripts).
 inline std::size_t find_attr_close(llvm::StringRef src, std::size_t start) {
     if (start + 1 >= src.size() || src[start] != '[' || src[start+1] != '[') return start;
     std::size_t i = start + 2;
@@ -145,7 +140,8 @@ inline std::size_t find_attr_close(llvm::StringRef src, std::size_t start) {
     return start;
 }
 
-// Split an attribute block's contents by top-level commas.
+// Split an attribute block's contents by top-level commas (commas not inside
+// parens or brackets). Each piece is one attribute spec.
 inline std::vector<llvm::StringRef> split_attrs(llvm::StringRef block) {
     std::vector<llvm::StringRef> out;
     int depth = 0;
@@ -171,63 +167,47 @@ inline std::vector<llvm::StringRef> split_attrs(llvm::StringRef block) {
     return out;
 }
 
-// Rewrite one attribute spec. If it starts with a recognized namespace,
-// convert to `clang::annotate("ns::<name>", <args>)`. Otherwise leave verbatim.
+// Rewrite one attribute spec. If it starts with `pb::<recognized-name>`,
+// convert to `clang::annotate("pb::<name>", <args>)`. Otherwise leave it
+// verbatim.
 inline std::string rewrite_one_attr(llvm::StringRef spec) {
+    // Trim leading whitespace; preserve it as a prefix.
     std::size_t start = 0;
     while (start < spec.size() && std::isspace(static_cast<unsigned char>(spec[start]))) ++start;
     llvm::StringRef leading = spec.substr(0, start);
     llvm::StringRef body    = spec.substr(start);
 
-    bool is_h5      = body.starts_with("h5::");
-    bool is_json    = body.starts_with("json::");
-    bool is_msgpack = body.starts_with("msgpack::");
-    bool is_cbor    = body.starts_with("cbor::");
-    bool is_bson    = body.starts_with("bson::");
-    bool is_avro    = body.starts_with("avro::");
-    bool is_rlp     = body.starts_with("rlp::");
-    if (!is_h5 && !is_json && !is_msgpack && !is_cbor && !is_bson && !is_avro && !is_rlp) return spec.str();
-
-    llvm::StringRef ns;
-    if (is_h5)      ns = "h5::";
-    else if (is_json)    ns = "json::";
-    else if (is_msgpack) ns = "msgpack::";
-    else if (is_cbor)    ns = "cbor::";
-    else if (is_bson)    ns = "bson::";
-    else if (is_avro)    ns = "avro::";
-    else                 ns = "rlp::";
+    constexpr llvm::StringRef ns = "pb::";
+    if (!body.starts_with(ns)) return spec.str();   // not a pb:: attribute
 
     body = body.drop_front(ns.size());
+    // Identifier follows the `pb::` prefix.
     std::size_t i = 0;
     while (i < body.size()
            && (std::isalnum(static_cast<unsigned char>(body[i])) || body[i] == '_')) ++i;
-    if (i == 0) return spec.str();
+    if (i == 0) return spec.str();    // empty identifier — shouldn't happen
     llvm::StringRef name = body.substr(0, i);
-    if (is_h5      && !is_h5_attr_name(name))      return spec.str();
-    if (is_json    && !is_json_attr_name(name))    return spec.str();
-    if (is_msgpack && !is_msgpack_attr_name(name)) return spec.str();
-    if (is_cbor    && !is_cbor_attr_name(name))    return spec.str();
-    if (is_bson    && !is_bson_attr_name(name))    return spec.str();
-    if (is_avro    && !is_avro_attr_name(name))    return spec.str();
-    if (is_rlp     && !is_rlp_attr_name(name))     return spec.str();
+    if (!is_pb_attr_name(name)) return spec.str();   // not one of ours
 
+    // Skip whitespace before `(` (if any).
     while (i < body.size() && std::isspace(static_cast<unsigned char>(body[i]))) ++i;
 
     std::string out;
     out.append(leading.str());
     if (i >= body.size() || body[i] != '(') {
-        out.append("clang::annotate(\"");
-        out.append(ns.str());
+        // No args.
+        out.append("clang::annotate(\"pb::");
         out.append(name.str());
         out.append("\")");
+        // Append anything trailing (shouldn't be any).
         out.append(body.substr(i).str());
         return out;
     }
+    // Args: `(` ... `)`
     std::size_t paren_end = find_matching_paren(body, i);
-    if (paren_end == i) return spec.str();
+    if (paren_end == i) return spec.str();   // unbalanced; leave alone
     llvm::StringRef args_inside = body.substr(i + 1, paren_end - i - 1);
-    out.append("clang::annotate(\"");
-    out.append(ns.str());
+    out.append("clang::annotate(\"pb::");
     out.append(name.str());
     out.append("\"");
     if (!args_inside.trim().empty()) {
@@ -235,29 +215,34 @@ inline std::string rewrite_one_attr(llvm::StringRef spec) {
         out.append(args_inside.str());
     }
     out.append(")");
+    // Append trailing chars after `)` (rare; usually empty).
     if (paren_end + 1 < body.size()) {
         out.append(body.substr(paren_end + 1).str());
     }
     return out;
 }
 
-// Whole-file rewrite. Respects // and /* */ comments and string/char literals.
+// Whole-file rewrite. Respects // and /* */ comments and string/char literals
+// so attribute-like text inside them stays intact.
 inline std::string rewrite(llvm::StringRef src) {
     std::string out;
     out.reserve(src.size() + src.size() / 16);
     std::size_t i = 0, n = src.size();
     while (i < n) {
         char c = src[i];
+        // Line comment.
         if (c == '/' && i + 1 < n && src[i+1] == '/') {
             while (i < n && src[i] != '\n') out.push_back(src[i++]);
             continue;
         }
+        // Block comment.
         if (c == '/' && i + 1 < n && src[i+1] == '*') {
             out.push_back(src[i++]); out.push_back(src[i++]);
             while (i + 1 < n && !(src[i] == '*' && src[i+1] == '/')) out.push_back(src[i++]);
             if (i + 1 < n) { out.push_back(src[i++]); out.push_back(src[i++]); }
             continue;
         }
+        // String / char literal.
         if (c == '"' || c == '\'') {
             char q = c;
             out.push_back(src[i++]);
@@ -272,6 +257,7 @@ inline std::string rewrite(llvm::StringRef src) {
             if (i < n) out.push_back(src[i++]);
             continue;
         }
+        // Attribute block: `[[ ... ]]`
         if (c == '[' && i + 1 < n && src[i+1] == '[') {
             std::size_t close = find_attr_close(src, i);
             if (close == i) {
@@ -279,9 +265,9 @@ inline std::string rewrite(llvm::StringRef src) {
                 continue;
             }
             llvm::StringRef block = src.substr(i + 2, close - i - 2);
-            if (block.contains("h5::") || block.contains("json::") || block.contains("msgpack::")
-                || block.contains("cbor::") || block.contains("bson::") || block.contains("avro::")
-                || block.contains("rlp::")) {
+            // Only rewrite if the block contains "pb::" — fast path for the
+            // common case of no-pb attributes.
+            if (block.contains("pb::")) {
                 auto attrs = split_attrs(block);
                 out.append("[[");
                 for (std::size_t k = 0; k < attrs.size(); ++k) {
@@ -300,6 +286,7 @@ inline std::string rewrite(llvm::StringRef src) {
     return out;
 }
 
+// Read a file from disk into a string. Returns empty on failure.
 inline std::string read_file(const std::string& path) {
     std::ifstream f(path);
     if (!f) return {};
@@ -307,23 +294,21 @@ inline std::string read_file(const std::string& path) {
     return ss.str();
 }
 
+// Apply the rewrite to every source path in `paths`, registering each
+// rewritten buffer as a virtual file overriding the on-disk copy. Skips
+// files that don't reference any pb:: attribute so the common case is a
+// no-op.
 inline void install_virtual_files(clang::tooling::ClangTool& Tool,
                                     const std::vector<std::string>& paths,
                                     std::vector<std::string>& storage) {
-    storage.reserve(paths.size());
+    storage.reserve(paths.size());   // keep buffers alive for Tool's lifetime
     for (const auto& p : paths) {
         std::string content = read_file(p);
         if (content.empty()) continue;
-        if (content.find("h5::") == std::string::npos
-            && content.find("json::") == std::string::npos
-            && content.find("msgpack::") == std::string::npos
-            && content.find("cbor::") == std::string::npos
-            && content.find("bson::") == std::string::npos
-            && content.find("avro::") == std::string::npos
-            && content.find("rlp::") == std::string::npos) continue;
+        if (content.find("pb::") == std::string::npos) continue;
         storage.push_back(rewrite(content));
         Tool.mapVirtualFile(p, storage.back());
     }
 }
 
-} // namespace h5_attr_translator
+} // namespace pb_attr_translator

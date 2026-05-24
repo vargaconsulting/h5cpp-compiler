@@ -26,7 +26,10 @@ struct SqlProducer : Producer<SqlProducer<D>> {
 
     void file_end_impl() {}
 
-    void template_decl_impl(const std::string& record) {
+    void template_decl_impl(const std::string& record,
+                            const std::string& /*doc*/ = "",
+                            const std::string& /*alias*/ = "",
+                            const std::string& /*version*/ = "") {
         record_name = record;
     }
 
@@ -55,7 +58,8 @@ struct SqlProducer : Producer<SqlProducer<D>> {
     }
 
     void type_insert_impl(const std::string& /*var*/, const std::string& field_name,
-                          const std::string& /*record_name*/, const std::string& type) {
+                          const std::string& /*record_name*/, const std::string& type,
+                          const std::string& /*on_disk_name*/ = "") {
         if (first_field) {
             first_field = false;
         } else {
@@ -67,6 +71,13 @@ struct SqlProducer : Producer<SqlProducer<D>> {
     }
 
     void type_release_impl() {}
+
+    void scatter_type_impl(const std::string& /*record_name*/,
+                           const std::vector<typename Producer<SqlProducer>::scatter_field_t>& /*fields*/,
+                           const std::string& /*chunk_size*/, const std::string& /*compress_algo*/,
+                           int /*compress_level*/,
+                           const std::string& /*doc*/, const std::string& /*alias*/,
+                           const std::string& /*version*/, const std::string& /*on_missing*/) {}
 
     bool cache_add_impl(const std::string& key, const std::string& type) {
         auto it = record_type_cache.find(type);

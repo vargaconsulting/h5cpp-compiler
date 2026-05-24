@@ -18,15 +18,17 @@
 #include "producer_h5.hpp"
 #include "producer_sql.hpp"
 #include "consumer.hpp"
-#include "consumer_rlp.hpp"
-#include "consumer_bson.hpp"
-#include "consumer_avro.hpp"
-#include "producer_pb.hpp"
-#include "consumer_pb.hpp"
-#include "h5_attr_translator.hpp"
 #include "consumer_json.hpp"
 #include "consumer_msgpack.hpp"
 #include "consumer_cbor.hpp"
+#include "consumer_bson.hpp"
+#include "consumer_avro.hpp"
+#include "consumer_rlp.hpp"
+#include "producer_pb.hpp"
+#include "consumer_pb.hpp"
+#include "consumer_proto.hpp"
+#include "pb_attr_translator.hpp"
+#include "h5_attr_translator.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
 	clang::ast_matchers::hasDescendant( clang::ast_matchers::declRefExpr( clang::ast_matchers::to( clang::ast_matchers::varDecl().bind("variableDecl")  ) ) ),
@@ -52,8 +54,6 @@ clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::c
 	))  )))
 ));
 
-enum class OutputFormat { hdf5, protobuf, json, msgpack, cbor, bson, avro, rlp,
-                          sql_postgres, sql_mysql, sql_lite3 };
 // pbTemplateMatcher: same shape as h5templateMatcher, but triggers on the
 // pb.hpp public surface. Covers pb::encode, pb::decode, and pb::encode_into.
 clang::ast_matchers::StatementMatcher pbTemplateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
@@ -71,7 +71,8 @@ clang::ast_matchers::StatementMatcher pbTemplateMatcher = clang::ast_matchers::c
 	))  )))
 ));
 
-enum class OutputFormat { hdf5, protobuf, json, msgpack, cbor, bson, avro, rlp };
+enum class OutputFormat { hdf5, protobuf, json, msgpack, cbor, bson, avro, rlp,
+                          sql_postgres, sql_mysql, sql_lite3 };
 
 static llvm::cl::OptionCategory MyToolCategory("h5cpp options");
 static llvm::cl::extrahelp CommonHelp(clang::tooling::CommonOptionsParser::HelpMessage);
@@ -103,6 +104,11 @@ static llvm::cl::opt<OutputFormat> Format(llvm::cl::desc("Output format:"),
     llvm::cl::init(OutputFormat::hdf5),
     llvm::cl::cat(MyToolCategory));
 
+static llvm::cl::opt<std::string> ProtoOutputFile("proto-out",
+    llvm::cl::desc("Phase 3: .proto schema output (used with --protobuf)"),
+    llvm::cl::value_desc("file"),
+    llvm::cl::cat(MyToolCategory));
+
 static llvm::cl::opt<bool> CheckMode("check",
     llvm::cl::desc("Verify that the existing generated file is up to date (exit 1 if stale)"),
     llvm::cl::cat(MyToolCategory),
@@ -128,6 +134,12 @@ int main(int argc, const char **argv) {
 	h5_attr_translator::install_virtual_files(
 		Tool, OptionsParser.getSourcePathList(), _h5_attr_storage);
 
+	// Issue #31: rewrite [[pb::xxx(...)]] → [[clang::annotate("pb::xxx", ...)]]
+	// for each source path before Clang sees it.
+	std::vector<std::string> _pb_attr_storage;
+	pb_attr_translator::install_virtual_files(
+		Tool, OptionsParser.getSourcePathList(), _pb_attr_storage);
+
 	std::string work_path = OutputFile;
 	if (CheckMode) {
 		work_path = OutputFile + ".h5cpp-check";
@@ -145,64 +157,52 @@ int main(int argc, const char **argv) {
 			}
 			case OutputFormat::protobuf: {
 				PbTemplateCallback<PbProducer> callback(work_path);
-				clang::ast_matchers::MatchFinder Finder;
 				Finder.addMatcher(pbTemplateMatcher, &callback);
+				std::optional<ProtoTemplateCallback> proto_cb;
+				if (!ProtoOutputFile.empty()) {
+					proto_cb.emplace(ProtoOutputFile);
+					Finder.addMatcher(pbTemplateMatcher, &*proto_cb);
+				}
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				if (rc == 0 && callback.error()) rc = 1;
 				break;
+			}
 			case OutputFormat::json: {
 				JsonTemplateCallback callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
-			}
-			case OutputFormat::json:
-				llvm::errs() << "h5cpp-compiler: --format json not yet implemented\n";
-				rc = 1;
 				break;
 			}
-			case OutputFormat::msgpack:
-				llvm::errs() << "h5cpp-compiler: --format msgpack not yet implemented\n";
-				rc = 1;
 			case OutputFormat::msgpack: {
 				MsgpackTemplateCallback callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
 			}
-				llvm::errs() << "h5cpp-compiler: --format cbor not yet implemented\n";
-				rc = 1;
 			case OutputFormat::cbor: {
 				CborTemplateCallback callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
 			}
-			case OutputFormat::bson:
-				llvm::errs() << "h5cpp-compiler: --format bson not yet implemented\n";
-				rc = 1;
 			case OutputFormat::bson: {
 				BsonTemplateCallback callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
 			}
-			case OutputFormat::avro:
-				llvm::errs() << "h5cpp-compiler: --format avro not yet implemented\n";
-				rc = 1;
 			case OutputFormat::avro: {
 				AvroTemplateCallback callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
+			}
 			case OutputFormat::rlp: {
 				RlpTemplateCallback callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
-			}
-			case OutputFormat::rlp:
-				llvm::errs() << "h5cpp-compiler: --format rlp not yet implemented\n";
-				rc = 1;
 				break;
+			}
 			case OutputFormat::sql_postgres: {
 				H5TemplateCallback<SqlProducer<SqlDialect::postgres>> callback(work_path);
 				Finder.addMatcher(h5templateMatcher, &callback);
@@ -220,7 +220,6 @@ int main(int argc, const char **argv) {
 				Finder.addMatcher(h5templateMatcher, &callback);
 				rc = Tool.run(clang::tooling::newFrontendActionFactory(&Finder).get());
 				break;
-			}
 			}
 		}
 	}

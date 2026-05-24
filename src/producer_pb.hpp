@@ -36,11 +36,66 @@ struct PbProducer : Producer<PbProducer> {
     // template_decl is the per-record opener. `record` is the qualified type
     // name (e.g. "::sn::sensor::reading_t"). Each record's descriptor_t is a
     // standalone specialization at file scope.
-    void template_decl_impl(const std::string& record){
+    //
+    // Phase 2 (issue #31): class-level [[pb::name(...)]] and [[pb::doc(...)]]
+    // metadata is emitted as leading comments. These do not change the C++
+    // descriptor's runtime behavior; the .proto emitter (Phase 3) consumes
+    // the same metadata to produce the `message Foo { ... }` block name and
+    // the SourceCodeInfo doc string.
+    void template_decl_impl(const std::string& record,
+                            const std::string& /*doc*/ = "",
+                            const std::string& /*alias*/ = "",
+                            const std::string& /*version*/ = ""){
         record_name = record;
         first_field = true;
         io << "template<> struct pb::meta::descriptor_t<" << record << "> {\n";
         io << "    static constexpr auto fields = std::tuple{";
+    }
+
+    // Phase 2: emit class-level metadata as a leading comment above the
+    // descriptor specialization. Called by the consumer before
+    // template_decl_impl. Empty strings skip the corresponding line.
+    void emit_class_metadata(const std::string& proto_name,
+                              const std::string& doc){
+        if (!proto_name.empty()) {
+            io << "// [[pb::name(\"" << proto_name << "\")]] — proto3 message name\n";
+        }
+        if (!doc.empty()) {
+            io << "// [[pb::doc(\"" << doc << "\")]]\n";
+        }
+    }
+
+    // Phase 2: emit field-level metadata as a leading comment ABOVE the
+    // corresponding pb::field<>/pb::oneof<>/pb::adapter_field<>/pb::ignore<>
+    // entry. Called by the consumer before each emit_*. Empty arguments
+    // skip the corresponding line. doc, proto_name, and on_missing are all
+    // optional.
+    void emit_field_metadata(const std::string& proto_name,
+                              const std::string& doc,
+                              const std::string& on_missing){
+        // Comments go BEFORE the entry; emit a leading comma if a previous
+        // entry exists, then the comments on new lines. This keeps the
+        // tuple syntax valid: prior-entry, /* comments */ next-entry.
+        if (proto_name.empty() && doc.empty() && on_missing.empty()) return;
+        // Emit the leading comma ourselves (so subsequent emit_*  knows
+        // not to re-emit it), then write comments on new lines.
+        if (!first_field) {
+            io << ",";
+            suppress_next_comma = true;
+        }
+        if (!proto_name.empty()) {
+            io << "\n        // [[pb::name(\"" << proto_name << "\")]]";
+        }
+        if (!doc.empty()) {
+            io << "\n        // [[pb::doc(\"" << doc << "\")]]";
+        }
+        if (!on_missing.empty()) {
+            io << "\n        // [[pb::on_missing(" << on_missing
+               << ")]] — pb::default_for_t<...> specialization emitted below";
+        }
+        // Reset first_field so the next emit_* doesn't insert its own
+        // leading comma — we already emitted one. Suppression flag.
+        suppress_next_comma = true;
     }
 
     // record_decl is called for each topologically-prior record (nested
@@ -66,8 +121,9 @@ struct PbProducer : Producer<PbProducer> {
     // decimal string ("1", "2", ...) instead of the HDF5 vname. record_name
     // is the qualified record type; field_name is the member identifier.
     void type_insert_impl(const std::string& var, const std::string& field_name,
-                          const std::string& rec_name, const std::string& /*type*/){
-        if (!first_field) io << ",";
+                          const std::string& rec_name, const std::string& /*type*/,
+                          const std::string& /*on_disk_name*/ = ""){
+        consume_leading_comma();
         io << "\n        pb::field<" << var << ", &" << rec_name << "::" << field_name << ">{}";
         first_field = false;
     }
@@ -76,10 +132,33 @@ struct PbProducer : Producer<PbProducer> {
         io << "\n    };\n};\n\n";
     }
 
+    // Commit 3: emit a pb::default_for_t<T, &T::m> specialization next to
+    // the descriptor when a field carries [[pb::on_missing(value)]]. The
+    // pb.hpp runtime (issue #4 on sandbox) consults this trait in
+    // pb::impl::apply_defaults during decode_message — wire-absent fields
+    // get the declared value instead of the proto3 zero.
+    void emit_default_for(const std::string& field_name,
+                            const std::string& record_name,
+                            const std::string& field_type,
+                            const std::string& value_expr){
+        io << "template<> struct pb::default_for_t<"
+           << record_name << ", &" << record_name << "::" << field_name << "> {\n"
+           << "    static constexpr bool        has_value = true;\n"
+           << "    static constexpr " << field_type << " value = " << value_expr << ";\n"
+           << "};\n\n";
+    }
+
     void type_release_impl(){
         // pb has no resource-id lifetime to manage — descriptor_t entries are
         // pure compile-time. No-op.
     }
+
+    void scatter_type_impl(const std::string& /*record_name*/,
+                           const std::vector<typename Producer<PbProducer>::scatter_field_t>& /*fields*/,
+                           const std::string& /*chunk_size*/, const std::string& /*compress_algo*/,
+                           int /*compress_level*/,
+                           const std::string& /*doc*/, const std::string& /*alias*/,
+                           const std::string& /*version*/, const std::string& /*on_missing*/) {}
 
     // The cache contract is HDF5-shaped (cpp-type → hid_t-var mapping).
     // PbProducer doesn't need that vocabulary — pb dispatches via traits at
@@ -96,7 +175,7 @@ struct PbProducer : Producer<PbProducer> {
                     const std::string& record_name,
                     const std::vector<std::string>& alt_types,
                     const std::vector<std::uint32_t>& tags){
-        if (!first_field) io << ",";
+        consume_leading_comma();
         io << "\n        pb::oneof<&" << record_name << "::" << member_name;
         for (std::size_t i = 0; i < alt_types.size(); ++i) {
             io << ", pb::alt<" << alt_types[i] << ", " << tags[i] << ">";
@@ -114,7 +193,7 @@ struct PbProducer : Producer<PbProducer> {
                               const std::string& field_name,
                               const std::string& record_name,
                               const std::string& wire_spec){
-        if (!first_field) io << ",";
+        consume_leading_comma();
         io << "\n        pb::field<" << tag
            << ", &" << record_name << "::" << field_name
            << ", pb::wire::" << wire_spec << "_t>{}";
@@ -122,21 +201,49 @@ struct PbProducer : Producer<PbProducer> {
     }
 
     // Stage 6 (Tier 4): adapter_field emission. Called when the consumer
-    // sees a [[clang::annotate("pb::adapter=Name")]] attribute on a field.
-    // Name is the adapter shorthand ("Timestamp", "Duration"), which maps
-    // to the library symbol pb::Name_adapter (Timestamp_adapter, etc.).
+    // sees a [[pb::adapter("Name")]] attribute on a field. Name is the
+    // adapter shorthand ("Timestamp", "Duration"), which maps to the
+    // library symbol pb::Name_adapter (Timestamp_adapter, etc.).
     void emit_adapter_field(std::uint32_t tag,
                              const std::string& field_name,
                              const std::string& record_name,
                              const std::string& adapter_name){
-        if (!first_field) io << ",";
+        consume_leading_comma();
         io << "\n        pb::adapter_field<" << tag
            << ", &" << record_name << "::" << field_name
            << ", pb::" << adapter_name << "_adapter>{}";
         first_field = false;
     }
 
+    // FR12: pb::ignore emission. Called when the consumer sees a
+    // [[pb::ignore]] attribute on a field. The descriptor entry
+    // `pb::ignore<&R::m>{}` is the deliberate-omission marker — pb.hpp's
+    // CCC#7 descriptor-completeness check accepts a member only if it
+    // appears in the field tuple, either as a real field or as ignore.
+    void emit_ignore(const std::string& field_name,
+                      const std::string& record_name){
+        consume_leading_comma();
+        io << "\n        pb::ignore<&" << record_name << "::" << field_name << ">{}";
+        first_field = false;
+    }
+
+    // Helper: emit the leading comma for any emit_* method. Honors
+    // suppress_next_comma (set by emit_field_metadata after it already
+    // emitted the comma+comments preamble for this entry).
+    bool consume_leading_comma() {
+        if (suppress_next_comma) {
+            suppress_next_comma = false;
+            return false;     // comma already emitted by the metadata
+        }
+        if (!first_field) {
+            io << ",";
+            return true;
+        }
+        return false;
+    }
+
 private:
     std::string record_name;
     bool        first_field = true;
+    bool        suppress_next_comma = false;
 };
