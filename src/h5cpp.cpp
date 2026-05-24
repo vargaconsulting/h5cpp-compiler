@@ -17,6 +17,7 @@
 
 #include "producer_h5.hpp"
 #include "consumer.hpp"
+#include "h5_attr_translator.hpp"
 
 clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::callExpr( clang::ast_matchers::allOf(
 	clang::ast_matchers::hasDescendant( clang::ast_matchers::declRefExpr( clang::ast_matchers::to( clang::ast_matchers::varDecl().bind("variableDecl")  ) ) ),
@@ -83,6 +84,12 @@ int main(int argc, const char **argv) {
 	clang::tooling::CommonOptionsParser &OptionsParser = ExpectedParser.get();
 	clang::tooling::ClangTool Tool(OptionsParser.getCompilations(),
 				 OptionsParser.getSourcePathList());
+
+	// Issue #32: rewrite [[h5::xxx(...)]] → [[clang::annotate("h5::xxx", ...)]]
+	// for each source path before Clang sees it.
+	std::vector<std::string> _h5_attr_storage;
+	h5_attr_translator::install_virtual_files(
+		Tool, OptionsParser.getSourcePathList(), _h5_attr_storage);
 
 	if (Format == OutputFormat::protobuf) {
 		llvm::errs() << "h5cpp-compiler: --protocol-buffers backend is not yet implemented\n";
