@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "",
+  "title": "sn::typecheck::Record",
+  "description": "String type test",
+  "type": "object",
+  "properties": {
+    "raw_text": {"type": "string"},
+    "display_name": {"type": "string"},
+    "email": {"type": "string", "format": "email"}
+  }
+}

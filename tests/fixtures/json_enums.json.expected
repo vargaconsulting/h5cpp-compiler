@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "",
+  "title": "sn::typecheck::Record",
+  "description": "Enum type test",
+  "type": "object",
+  "properties": {
+    "color": {"type": "string"},
+    "id": {"type": "integer"}
+  }
+}
