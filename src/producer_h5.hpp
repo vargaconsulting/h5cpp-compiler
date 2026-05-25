@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <set>
 
 struct H5Producer : Producer<H5Producer> {
 	H5Producer(){
@@ -26,10 +27,25 @@ struct H5Producer : Producer<H5Producer> {
 		};
 	}
 
+	std::set<std::string> includes;
+	bool preamble_done = false;
+
 	void file_begin_impl(){
+	}
+
+	void add_include_impl(const std::string& path){
+		includes.insert(path);
+	}
+
+	void ensure_preamble(){
+		if (preamble_done) return;
 		io << "#pragma once" << std::endl << std::endl;
-		io << "#include <hdf5.h>" << std::endl;
-		io << "#include <h5cpp/all>" << std::endl << std::endl;
+		io << "#include <h5cpp/all>" << std::endl;
+		for (const auto& inc : includes)
+			io << "#include \"" << inc << "\"" << std::endl;
+		if (!includes.empty())
+			io << std::endl;
+		preamble_done = true;
 	}
 
 	void file_end_impl(){
@@ -38,6 +54,7 @@ struct H5Producer : Producer<H5Producer> {
 
 	void template_decl_impl(const std::string& record, const std::string& doc,
 	                        const std::string& alias, const std::string& version){
+		ensure_preamble();
 		record_name = record;
 		if( !doc.empty() )    io << "// doc: \""    << doc    << "\"\n";
 		if( !alias.empty() )  io << "// alias: \""  << alias  << "\"\n";
@@ -97,6 +114,7 @@ struct H5Producer : Producer<H5Producer> {
 	                       const std::string& alias,
 	                       const std::string& version,
 	                       const std::string& on_missing){
+		ensure_preamble();
 		// Generate a valid namespace identifier from the record name or alias.
 		std::string ns_name = (alias.empty() ? record_name : alias) + "_";
 		std::replace(ns_name.begin(), ns_name.end(), ':', '_');
