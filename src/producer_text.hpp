@@ -10,6 +10,7 @@ struct TextProducer : Producer<TextProducer> {
 	void file_end_impl(){
 		io <<indent<< "<file end>\n";
 	};
+	void add_include_impl(const std::string& /*path*/){}
 	void template_decl_impl(const std::string& name){
 		io<<indent<<"<template decl: " << name << ">\n";
 	};
