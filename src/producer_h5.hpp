@@ -28,6 +28,7 @@ struct H5Producer : Producer<H5Producer> {
 	}
 
 	std::set<std::string> includes;
+	std::set<std::string> emitted_includes;
 	bool preamble_done = false;
 
 	void file_begin_impl(){
@@ -38,14 +39,20 @@ struct H5Producer : Producer<H5Producer> {
 	}
 
 	void ensure_preamble(){
-		if (preamble_done) return;
-		io << "#pragma once" << std::endl << std::endl;
-		io << "#include <h5cpp/all>" << std::endl;
-		for (const auto& inc : includes)
-			io << "#include \"" << inc << "\"" << std::endl;
-		if (!includes.empty())
+		if (!preamble_done) {
+			io << "#pragma once" << std::endl << std::endl;
+			io << "#include <h5cpp/all>" << std::endl;
+			preamble_done = true;
+		}
+		bool any_new = false;
+		for (const auto& inc : includes) {
+			if (emitted_includes.insert(inc).second) {
+				io << "#include \"" << inc << "\"" << std::endl;
+				any_new = true;
+			}
+		}
+		if (any_new)
 			io << std::endl;
-		preamble_done = true;
 	}
 
 	void file_end_impl(){
@@ -129,7 +136,11 @@ struct H5Producer : Producer<H5Producer> {
 		io << "struct row_t {\n";
 		for (const auto& f : fields) {
 			if (f.is_vlen) {
-				io << "    hvl_t    " << f.cpp_name << ";\n";
+				if (f.is_string) {
+					io << "    char*    " << f.cpp_name << ";\n";
+				} else {
+					io << "    hvl_t    " << f.cpp_name << ";\n";
+				}
 			} else {
 				io << "    " << f.cpp_type << " " << f.cpp_name << ";\n";
 			}
@@ -226,7 +237,11 @@ struct H5Producer : Producer<H5Producer> {
 			const auto& f = fields[i];
 			io << "        ";
 			if (f.is_vlen) {
-				io << "hvl_t{" << f.cpp_name << "_len, (void*)" << f.cpp_name << "_ptr}";
+				if (f.is_string) {
+					io << "(char*)" << f.cpp_name << "_ptr";
+				} else {
+					io << "hvl_t{" << f.cpp_name << "_len, (void*)" << f.cpp_name << "_ptr}";
+				}
 			} else {
 				io << "obj." << f.cpp_name;
 			}
@@ -269,8 +284,8 @@ struct H5Producer : Producer<H5Producer> {
 		for (const auto& f : fields) {
 			if (f.is_vlen) {
 				if (f.is_string) {
-					io << "    obj." << f.cpp_name << ".assign(static_cast<char*>(r."
-					   << f.cpp_name << ".p), r." << f.cpp_name << ".len);\n";
+					io << "    if (r." << f.cpp_name << ") obj." << f.cpp_name << ".assign(r."
+					   << f.cpp_name << ");\n";
 				} else {
 					io << "    obj." << f.cpp_name << ".assign(static_cast<" << f.cpp_type
 					   << "*>(r." << f.cpp_name << ".p), static_cast<" << f.cpp_type
@@ -280,7 +295,9 @@ struct H5Producer : Producer<H5Producer> {
 				io << "    obj." << f.cpp_name << " = r." << f.cpp_name << ";\n";
 			}
 		}
-		io << "    H5Treclaim(compound_type(), H5S_ALL, H5P_DEFAULT, &r);\n"
+		io << "    hid_t reclaim_space = H5Screate(H5S_SCALAR);\n"
+		   << "    H5Dvlen_reclaim(compound_type(), reclaim_space, H5P_DEFAULT, &r);\n"
+		   << "    H5Sclose(reclaim_space);\n"
 		   << "}\n"
 		   << "} // namespace h5\n\n";
 
