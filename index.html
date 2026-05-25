@@ -1,5 +1,4 @@
 
-
 <!doctype html>
 <html lang="en" class="no-js">
   <head>
@@ -17,8 +16,12 @@
       
       
       
+      
+        
+      
+      
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.17">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -26,10 +29,10 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.7e37652d.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -68,53 +71,6 @@
 
     
     
-    
-
-    <meta property="og:type" content="article" />
-    <meta property="og:site_name" content="H5CPP Compiler" />
-    <meta property="og:title" content="H5CPP Compiler" />
-    <meta property="og:description" content="H5CPP — Reverse Schema Compiler for C and C++" />
-    <meta property="og:url" content="https://steven-varga.ca/" />
-    <meta property="og:image" content="https://steven-varga.ca//assets/social/og-default.png" />
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@vargaconsulting" />
-    <meta name="twitter:title" content="H5CPP Compiler" />
-    <meta name="twitter:description" content="H5CPP — Reverse Schema Compiler for C and C++" />
-    <meta name="twitter:image" content="https://steven-varga.ca//assets/social/og-default.png" />
-
-    <!-- SEO -->
-    <link rel="canonical" href="https://steven-varga.ca/" />
-    <meta name="description" content="H5CPP — Reverse Schema Compiler for C and C++" />
-    <script type="application/ld+json">
-    {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": "H5CPP Compiler",
-    "description": "H5CPP — Reverse Schema Compiler for C and C++",
-    "url": "https://steven-varga.ca/",
-    "datePublished": "2010-01-01",
-    "author": {
-        "@type": "Person",
-        "name": "Steven Varga"
-    },
-    "publisher": {
-        "@type": "Organization",
-        "name": "H5CPP Compiler",
-        "logo": {
-        "@type": "ImageObject",
-        "url": "https://steven-varga.ca//assets/logo.png"
-        }
-    },
-    "image": "https://steven-varga.ca//assets/social/og-default.png"
-    }
-    </script>    
-
-<link rel="alternate" type="application/rss+xml" title="H5CPP Compiler RSS Feed" href="./rss.xml" />
-<link rel="alternate" type="application/feed+json" title="H5CPP Compiler JSON Feed" href="./feed.json" />
-
-
-
   </head>
   
   
@@ -132,11 +88,6 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
-      
-        
-        <a href="#installation" class="md-skip">
-          Skip to content
-        </a>
       
     </div>
     <div data-md-component="announce">
@@ -343,65 +294,22 @@
       
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Introduction
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
       <a href="." class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
+    
+  
     Introduction
+  
+
     
   </span>
   
+  
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
       
     </li>
   
@@ -427,32 +335,6 @@
   
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Installation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -461,6 +343,7 @@
           
           
             <div class="md-content" data-md-component="content">
+              
               <article class="md-content__inner md-typeset">
                 
                   
@@ -600,19 +483,6 @@
 </span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a><span class="w">    </span><span class="cm">/* END IGNORED STRUCT */</span>
 </span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="p">}</span>
 </span></code></pre></div>
-<h2 id="installation">Installation</h2>
-<p><strong>LLVM 16</strong> is supported. To compile from source you need both the LLVM and Clang development packages installed:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>llvm-16<span class="w"> </span>llvm-16-dev<span class="w"> </span>libclang-16-dev<span class="w"> </span>clang-16
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>make<span class="w"> </span>install<span class="w">   </span><span class="c1"># build and install the source code transformation tool</span>
-</span></code></pre></div>
-<p>Optionally you can remove the development libraries and keep only the runtime:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>sudo<span class="w"> </span>apt<span class="w"> </span>purge<span class="w"> </span>llvm-16<span class="w"> </span>libllvm-16-dev<span class="w"> </span>libclang-16-dev<span class="w"> </span>clang-16<span class="w">  </span><span class="c1"># remove development libraries</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>libllvm16<span class="w"> </span>libclang-common-16-dev<span class="w">               </span><span class="c1"># install runtime dependencies</span>
-</span></code></pre></div>
-<h2 id="usage">Usage</h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>h5cpp<span class="w"> </span>your_translation_unit.cpp<span class="w"> </span>--<span class="w"> </span>-v<span class="w"> </span><span class="k">$(</span>CXXFLAGS<span class="k">)</span><span class="w"> </span>-Dgenerated.h
-</span></code></pre></div>
-<p>This runs the compiler front end on the specified input and outputs the necessary HDF5 type descriptors (or an error message if any).</p>
 <!-- Ubuntu 22.04 -->
 <!-- Ubuntu 24.04 -->
 <!-- macOS latest -->
@@ -670,10 +540,11 @@
     
     
       
-      <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "search.suggest", "content.code.copy", "content.tooltips"], "search": "assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "search.suggest", "content.code.copy", "content.tooltips"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.92b07e13.min.js"></script>
+      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
       
         <script src="https://cdn.tailwindcss.com"></script>
       

@@ -1,0 +1,1485 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="H5CPP — Reverse Schema Compiler for C and C++">
+      
+      
+        <meta name="author" content="Steven Varga">
+      
+      
+        <link rel="canonical" href="https://steven-varga.ca/h5cpp-compiler-sql-attribute-taxonomy/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>sql:: Attribute Vocabulary (SQL Backend) - H5CPP Compiler</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../styles/custom.css">
+    
+      <link rel="stylesheet" href="../styles/background.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-XCXX1L29GM"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-XCXX1L29GM",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-XCXX1L29GM",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="solarized" data-md-color-primary="orange" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#sql-attribute-vocabulary-sql-backend" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="H5CPP Compiler" class="md-header__button md-logo" aria-label="H5CPP Compiler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">H5CPP — Reverse Schema Compiler for C and C++ </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              sql:: Attribute Vocabulary (SQL Backend)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    <div class="md-social-inline">
+      
+      
+        
+        
+        
+        
+          
+          
+        
+        <a href="https://wa.me/16475611829" target="_blank" rel="noopener" title="wa.me" class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.23 8.23 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.39-4.19-1.15l-.3-.17-3.12.82.83-3.04-.2-.32a8.2 8.2 0 0 1-1.26-4.38c.01-4.54 3.7-8.24 8.25-8.24M8.53 7.33c-.16 0-.43.06-.66.31-.22.25-.87.86-.87 2.07 0 1.22.89 2.39 1 2.56.14.17 1.76 2.67 4.25 3.73.59.27 1.05.42 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.46-.6 1.67-1.18s.21-1.07.15-1.18c-.07-.1-.23-.16-.48-.27-.25-.14-1.47-.74-1.69-.82-.23-.08-.37-.12-.56.12-.16.25-.64.81-.78.97-.15.17-.29.19-.53.07-.26-.13-1.06-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.12-.24-.01-.39.11-.5.11-.11.27-.29.37-.44.13-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.11-.56-1.35-.77-1.84-.2-.48-.4-.42-.56-.43-.14 0-.3-.01-.47-.01"/></svg>
+        </a>
+      
+        
+        
+        
+        
+        <a href="mailto:steven@vargaconsulting.ca" target="_blank" rel="noopener" title="" class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22 5.5H9c-1.1 0-2 .9-2 2v9a2 2 0 0 0 2 2h13c1.11 0 2-.89 2-2v-9a2 2 0 0 0-2-2m0 3.67-6.5 3.33L9 9.17V7.5l6.5 3.31L22 7.5zM5 16.5c0 .17.03.33.05.5H1c-.552 0-1-.45-1-1s.448-1 1-1h4zM3 7h2.05c-.02.17-.05.33-.05.5V9H3c-.55 0-1-.45-1-1s.45-1 1-1m-2 5c0-.55.45-1 1-1h3v2H2c-.55 0-1-.45-1-1"/></svg>
+        </a>
+      
+        
+        
+        
+        
+          
+          
+        
+        <a href="https://x.com/vargaconsulting" target="_blank" rel="noopener" title="x.com" class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.2 4.2 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.52 8.52 0 0 1-5.33 1.84q-.51 0-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23"/></svg>
+        </a>
+      
+        
+        
+        
+        
+          
+          
+        
+        <a href="https://www.linkedin.com/in/steven-varga-04224a19/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.32 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93zM6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37z"/></svg>
+        </a>
+      
+        
+        
+        
+        
+          
+          
+        
+        <a href="https://github.com/vargaconsulting" target="_blank" rel="noopener" title="github.com" class="md-header__button md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2"/></svg>
+        </a>
+      
+
+      
+      <span class="md-header__button md-icon" style="pointer-events: none; opacity: 0.4;">|</span>  
+    </div>
+  
+
+  
+  
+    
+    
+    
+
+    <input class="md-option"
+           data-md-color-media=""
+           data-md-color-scheme="solarized"
+           data-md-color-primary="orange"
+           data-md-color-accent="indigo"
+            aria-label="Switch to dark mode"
+           
+           type="radio" name="__palette" id="__palette_0">
+
+    
+      <label class="md-header__button md-icon"
+             title="Switch to dark mode"
+             for="__palette_1">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7M9 21a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+
+    <input class="md-option"
+           data-md-color-media=""
+           data-md-color-scheme="slate"
+           data-md-color-primary="orange"
+           data-md-color-accent="indigo"
+            aria-label="Switch to light mode"
+           
+           type="radio" name="__palette" id="__palette_1">
+
+    
+      <label class="md-header__button md-icon"
+             title="Switch to light mode"
+             for="__palette_0">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7M9 21v-1h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1m3-17a5 5 0 0 0-5 5c0 2.05 1.23 3.81 3 4.58V16h4v-2.42c1.77-.77 3-2.53 3-4.58a5 5 0 0 0-5-5"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="H5CPP Compiler" class="md-nav__button md-logo" aria-label="H5CPP Compiler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    H5CPP Compiler
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TL;DR
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-dialect-flags-and-cli-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Dialect flags and CLI usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-universal-vocabulary-same-words-sql-namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Universal vocabulary — same words, sql:: namespace
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Universal vocabulary — same words, sql:: namespace">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#universal-tier-1-must-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Universal Tier 1 — must-have
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#universal-tier-2-high-value-low-cost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Universal Tier 2 — high value, low cost
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-sql-specific-vocabulary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. SQL-specific vocabulary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. SQL-specific vocabulary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tier-1-must-have" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — must-have
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-2-high-value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — high value
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tier-3-type-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 — type control
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-type-map-c-sql-per-dialect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Type map — C++ → SQL per dialect
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Type map — C++ → SQL per dialect">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#primitives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Primitives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#complex-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complex types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-ddl-output-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. DDL output format
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. DDL output format">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-struct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single struct
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nested-structs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nested structs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multidimensional-arrays" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multidimensional arrays
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-identifier-rules-per-dialect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Identifier rules per dialect
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-attribute-wiring-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Attribute wiring status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Attribute wiring status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#not-yet-wired-staging-branch-30-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet wired (staging branch #30 pattern)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-design-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Design decisions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Design decisions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decided" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decided
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Sources
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="sql-attribute-vocabulary-sql-backend">sql:: Attribute Vocabulary (SQL Backend)</h1>
+<p><strong>Date:</strong> 2026-05-24
+<strong>Authors:</strong> Steven Varga
+<strong>Status:</strong> Implemented on <code>vargalabs/h5cpp-compiler#33-sql-backend</code>
+<strong>Repos:</strong> <code>vargalabs/h5cpp-compiler</code> (SQL DDL emitter, issue #33)
+<strong>Scope:</strong> SQL backend C++ attribute vocabulary and type-mapping taxonomy. Defines the <code>[[sql::...]]</code> attributes the compiler will recognize (once attribute wiring is extended), the DDL emission semantics, and the three supported dialects.
+<strong>Companions:</strong>
+- <code>tasks/h5cpp-compiler-h5-attribute-taxonomy.md</code> — HDF5 attribute vocabulary
+- <code>tasks/h5cpp-compiler-backend-cookbook.md</code> — transferable recipe for adding any new backend</p>
+<hr />
+<h2 id="tldr">TL;DR</h2>
+<p>The SQL backend emits <code>CREATE TABLE</code> DDL statements from annotated C++ structs. Three dialects are supported: <strong>PostgreSQL</strong>, <strong>MySQL</strong>, and <strong>SQLite3</strong>. Each backend gets a boolean flag (<code>--sql-postgres</code>, <code>--sql-mysql</code>, <code>--sql-lite3</code>) and uses the unified <code>-o &lt;file&gt;</code> output path.</p>
+<table>
+<thead>
+<tr>
+<th>Surface today (C++17 standard-attribute)</th>
+<th>C++26 reflection form</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[[sql::table("users")]]</code></td>
+<td><code>[[=sql::table{"users"}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::column("user_id")]]</code></td>
+<td><code>[[=sql::column{"user_id"}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::primary_key]]</code></td>
+<td><code>[[=sql::primary_key{}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::unique]]</code></td>
+<td><code>[[=sql::unique{}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::not_null]]</code></td>
+<td><code>[[=sql::not_null{}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::default_(42)]]</code></td>
+<td><code>[[=sql::default_{42}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::foreign_key("other_table.col")]]</code></td>
+<td><code>[[=sql::foreign_key{"other_table.col"}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::check("value &gt; 0")]]</code></td>
+<td><code>[[=sql::check{"value &gt; 0"}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::index]]</code></td>
+<td><code>[[=sql::index{}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::type_override("VARCHAR(255)")]]</code></td>
+<td><code>[[=sql::type_override{"VARCHAR(255)"}]]</code></td>
+</tr>
+<tr>
+<td><code>[[sql::nested("jsonb")]]</code></td>
+<td><code>[[=sql::nested{"jsonb"}]]</code></td>
+</tr>
+</tbody>
+</table>
+<p>Only syntactic shift is <code>(args)</code> → <code>{args}</code> under the <code>[[=...]]</code> form. <strong>Names stay put.</strong></p>
+<hr />
+<h2 id="1-dialect-flags-and-cli-usage">1. Dialect flags and CLI usage</h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>h5cpp<span class="w"> </span>--sql-postgres<span class="w"> </span>-o<span class="w"> </span>schema.sql<span class="w"> </span>my_structs.cpp<span class="w"> </span>--<span class="w"> </span>-std<span class="o">=</span>c++17
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>h5cpp<span class="w"> </span>--sql-mysql<span class="w">    </span>-o<span class="w"> </span>schema.sql<span class="w"> </span>my_structs.cpp<span class="w"> </span>--<span class="w"> </span>-std<span class="o">=</span>c++17
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>h5cpp<span class="w"> </span>--sql-lite3<span class="w">    </span>-o<span class="w"> </span>schema.sql<span class="w"> </span>my_structs.cpp<span class="w"> </span>--<span class="w"> </span>-std<span class="o">=</span>c++17
+</span></code></pre></div>
+<p>The SQL backend is integrated into the unified <code>--format</code> dispatcher (issue #30). Each dialect is a distinct enum value in <code>OutputFormat</code> and gets its own CLI flag.</p>
+<hr />
+<h2 id="2-universal-vocabulary-same-words-sql-namespace">2. Universal vocabulary — same words, <code>sql::</code> namespace</h2>
+<p>These attributes use vocabulary identical to <code>h5::*</code> where the concept overlaps (rename, ignore, doc, alias). They live in <code>sql::</code> so the namespace stays self-contained for SQL-only users.</p>
+<h3 id="universal-tier-1-must-have">Universal Tier 1 — must-have</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[[sql::name("col_name")]]</code></td>
+<td>Rename a field for the SQL column. Defaults to the C++ field name.</td>
+<td><code>[[sql::name("created_at")]] std::chrono::time_point_t ts;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::ignore]]</code></td>
+<td>Skip this field entirely. Column absent from the emitted table.</td>
+<td><code>[[sql::ignore]] int debug_counter;</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="universal-tier-2-high-value-low-cost">Universal Tier 2 — high value, low cost</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[[sql::doc("description")]]</code></td>
+<td>Emitted as a SQL comment on the column or table.</td>
+<td><code>[[sql::doc("nanoseconds since epoch")]] std::uint64_t ts;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::alias("Name")]]</code></td>
+<td><strong>Class-level.</strong> Overrides the table name. Defaults to sanitized C++ qualified name (<code>::</code> → <code>_</code>).</td>
+<td><code>struct [[sql::alias("Users")]] user_t { ... };</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-sql-specific-vocabulary">3. SQL-specific vocabulary</h2>
+<h3 id="tier-1-must-have">Tier 1 — must-have</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[[sql::table("name")]]</code></td>
+<td><strong>Class-level.</strong> Overrides the generated table name.</td>
+<td><code>struct [[sql::table("app_users")]] user_t { ... };</code></td>
+</tr>
+<tr>
+<td><code>[[sql::column("name")]]</code></td>
+<td><strong>Field-level.</strong> Overrides the generated column name.</td>
+<td><code>[[sql::column("user_id")]] int id;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::primary_key]]</code></td>
+<td>Emits <code>PRIMARY KEY</code> constraint.</td>
+<td><code>[[sql::primary_key]] int id;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::not_null]]</code></td>
+<td>Emits <code>NOT NULL</code> constraint. <strong>Default for all fields</strong> (C++ POD fields are always present).</td>
+<td><code>[[sql::not_null]] int id;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::unique]]</code></td>
+<td>Emits <code>UNIQUE</code> constraint.</td>
+<td><code>[[sql::unique]] std::string email;</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="tier-2-high-value">Tier 2 — high value</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[[sql::default_(value)]]</code></td>
+<td>Emits <code>DEFAULT value</code> clause. Dialect-aware quoting (strings quoted, numbers bare).</td>
+<td><code>[[sql::default_("active")]] std::string status;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::foreign_key("table.col")]]</code></td>
+<td>Emits <code>REFERENCES table(col)</code> clause.</td>
+<td><code>[[sql::foreign_key("orders.id")]] int order_id;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::check("expr")]]</code></td>
+<td>Emits <code>CHECK (expr)</code> clause.</td>
+<td><code>[[sql::check("value &gt; 0")]] int value;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::index]]</code></td>
+<td>Emits a <code>CREATE INDEX</code> statement after the table.</td>
+<td><code>[[sql::index]] std::string email;</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="tier-3-type-control">Tier 3 — type control</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[[sql::type_override("TYPE")]]</code></td>
+<td>Overrides the dialect-specific type mapping for this field.</td>
+<td><code>[[sql::type_override("VARCHAR(255)")]] std::string name;</code></td>
+</tr>
+<tr>
+<td><code>[[sql::nested("jsonb")]]</code></td>
+<td>Controls how nested structs are represented. Values: <code>"jsonb"</code> (PostgreSQL), <code>"json"</code> (MySQL), <code>"text"</code> (SQLite3), or <code>"table"</code> (create a separate table with FK).</td>
+<td><code>[[sql::nested("jsonb")]] address_t addr;</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-type-map-c-sql-per-dialect">4. Type map — C++ → SQL per dialect</h2>
+<h3 id="primitives">Primitives</h3>
+<table>
+<thead>
+<tr>
+<th>C++ type</th>
+<th>PostgreSQL</th>
+<th>MySQL</th>
+<th>SQLite3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bool</code> / <code>_Bool</code></td>
+<td><code>BOOLEAN</code></td>
+<td><code>TINYINT(1)</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>char</code></td>
+<td><code>SMALLINT</code></td>
+<td><code>TINYINT</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>unsigned char</code></td>
+<td><code>SMALLINT</code></td>
+<td><code>TINYINT UNSIGNED</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>short</code></td>
+<td><code>SMALLINT</code></td>
+<td><code>SMALLINT</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>unsigned short</code></td>
+<td><code>SMALLINT</code></td>
+<td><code>SMALLINT UNSIGNED</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>int</code></td>
+<td><code>INTEGER</code></td>
+<td><code>INT</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>unsigned int</code></td>
+<td><code>INTEGER</code></td>
+<td><code>INT UNSIGNED</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>long</code></td>
+<td><code>BIGINT</code></td>
+<td><code>BIGINT</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>unsigned long</code></td>
+<td><code>BIGINT</code></td>
+<td><code>BIGINT UNSIGNED</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>long long</code></td>
+<td><code>BIGINT</code></td>
+<td><code>BIGINT</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>unsigned long long</code></td>
+<td><code>BIGINT</code></td>
+<td><code>BIGINT UNSIGNED</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+<tr>
+<td><code>float</code></td>
+<td><code>REAL</code></td>
+<td><code>FLOAT</code></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td><code>double</code></td>
+<td><code>DOUBLE PRECISION</code></td>
+<td><code>DOUBLE</code></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td><code>long double</code></td>
+<td><code>DOUBLE PRECISION</code></td>
+<td><code>DOUBLE</code></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td><code>enum</code> / <code>enum class</code></td>
+<td><code>INTEGER</code></td>
+<td><code>INT</code></td>
+<td><code>INTEGER</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="complex-types">Complex types</h3>
+<table>
+<thead>
+<tr>
+<th>C++ type</th>
+<th>PostgreSQL</th>
+<th>MySQL</th>
+<th>SQLite3</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nested struct <code>S</code></td>
+<td><code>JSONB</code></td>
+<td><code>JSON</code></td>
+<td><code>TEXT</code></td>
+<td>One column holding the nested struct as JSON.</td>
+</tr>
+<tr>
+<td><code>T[N]</code> (C array)</td>
+<td><code>T[]</code></td>
+<td><code>JSON</code></td>
+<td><code>TEXT</code></td>
+<td>PostgreSQL native arrays; MySQL/SQLite fall back to JSON/TEXT.</td>
+</tr>
+<tr>
+<td><code>T[M][N]</code> (multi-dim array)</td>
+<td><code>T[][]</code></td>
+<td><code>JSON</code></td>
+<td><code>TEXT</code></td>
+<td>PostgreSQL supports <code>[][]</code> syntax; MySQL/SQLite fall back.</td>
+</tr>
+<tr>
+<td><code>std::string</code></td>
+<td><code>TEXT</code></td>
+<td><code>TEXT</code></td>
+<td><code>TEXT</code></td>
+<td>No length limit assumed; override with <code>sql::type_override</code>.</td>
+</tr>
+<tr>
+<td><code>std::vector&lt;T&gt;</code></td>
+<td><code>JSONB</code></td>
+<td><code>JSON</code></td>
+<td><code>TEXT</code></td>
+<td>No native variable-length array in standard SQL.</td>
+</tr>
+<tr>
+<td><code>std::map&lt;K,V&gt;</code></td>
+<td><code>JSONB</code></td>
+<td><code>JSON</code></td>
+<td><code>TEXT</code></td>
+<td>No native map type; JSON fallback.</td>
+</tr>
+<tr>
+<td><code>std::optional&lt;T&gt;</code></td>
+<td><code>T</code> (nullable)</td>
+<td><code>T</code> (nullable)</td>
+<td><code>T</code> (nullable)</td>
+<td>Emitted without <code>NOT NULL</code>; runtime nulls allowed.</td>
+</tr>
+<tr>
+<td><code>std::chrono::time_point</code></td>
+<td><code>TIMESTAMPTZ</code></td>
+<td><code>DATETIME(6)</code></td>
+<td><code>TEXT</code></td>
+<td>Auto-detected; can override with <code>sql::type_override</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-ddl-output-format">5. DDL output format</h2>
+<h3 id="single-struct">Single struct</h3>
+<p>Input:
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">namespace</span><span class="w"> </span><span class="nn">sn</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">Record</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="kt">int</span><span class="w">    </span><span class="n">id</span><span class="p">;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="kt">double</span><span class="w"> </span><span class="n">value</span><span class="p">;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p">};</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p>PostgreSQL output:
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">-- Generated by h5cpp-compiler SQL backend</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1">-- Dialect: postgresql</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;sn__Record&quot;</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="ss">&quot;id&quot;</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="ss">&quot;value&quot;</span><span class="w"> </span><span class="n">DOUBLE</span><span class="w"> </span><span class="k">PRECISION</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">);</span>
+</span></code></pre></div></p>
+<p>MySQL output:
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">-- Generated by h5cpp-compiler SQL backend</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">-- Dialect: mysql</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="o">`</span><span class="n">sn__Record</span><span class="o">`</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="o">`</span><span class="n">id</span><span class="o">`</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="o">`</span><span class="n">value</span><span class="o">`</span><span class="w"> </span><span class="n">DOUBLE</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">);</span>
+</span></code></pre></div></p>
+<p>SQLite3 output:
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">-- Generated by h5cpp-compiler SQL backend</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">-- Dialect: sqlite3</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;sn__Record&quot;</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="ss">&quot;id&quot;</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="ss">&quot;value&quot;</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">);</span>
+</span></code></pre></div></p>
+<h3 id="nested-structs">Nested structs</h3>
+<p>Input:
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">namespace</span><span class="w"> </span><span class="nn">sn</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">Inner</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">b</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="k">struct</span><span class="w"> </span><span class="nc">Outer</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="kt">int</span><span class="w">   </span><span class="n">idx</span><span class="p">;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="n">Inner</span><span class="w"> </span><span class="n">inner_singleton</span><span class="p">;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="n">Inner</span><span class="w"> </span><span class="n">inner_array</span><span class="p">[</span><span class="mi">4</span><span class="p">];</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">};</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p>PostgreSQL output:
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;sn__Inner&quot;</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="ss">&quot;a&quot;</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="ss">&quot;b&quot;</span><span class="w"> </span><span class="n">DOUBLE</span><span class="w"> </span><span class="k">PRECISION</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">);</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;sn__Outer&quot;</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="ss">&quot;idx&quot;</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">    </span><span class="ss">&quot;inner_singleton&quot;</span><span class="w"> </span><span class="n">JSONB</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="ss">&quot;inner_array&quot;</span><span class="w"> </span><span class="n">JSONB</span><span class="p">[]</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">);</span>
+</span></code></pre></div></p>
+<p><strong>Key behavior:</strong> Nested structs produce a separate <code>CREATE TABLE</code> for the inner struct, AND the outer struct references it as <code>JSONB</code> (or <code>JSON</code> / <code>TEXT</code> depending on dialect). This is a pragmatic compromise: the inner table exists for introspection and potential FK usage, but the outer table stores the nested data as JSON for query simplicity.</p>
+<h3 id="multidimensional-arrays">Multidimensional arrays</h3>
+<p>Input:
+<div class="language-cpp highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">namespace</span><span class="w"> </span><span class="nn">sn</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">struct</span><span class="w"> </span><span class="nc">Cell</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">x</span><span class="p">;</span><span class="w"> </span><span class="kt">float</span><span class="w"> </span><span class="n">y</span><span class="p">;</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">struct</span><span class="w"> </span><span class="nc">Grid</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">idx</span><span class="p">;</span><span class="w"> </span><span class="n">Cell</span><span class="w"> </span><span class="n">field_05</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="mi">8</span><span class="p">];</span><span class="w"> </span><span class="p">};</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p>PostgreSQL output:
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;sn__Cell&quot;</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="ss">&quot;x&quot;</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="ss">&quot;y&quot;</span><span class="w"> </span><span class="nb">REAL</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="p">);</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;sn__Grid&quot;</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="ss">&quot;idx&quot;</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="ss">&quot;field_05&quot;</span><span class="w"> </span><span class="n">JSONB</span><span class="p">[][]</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">);</span>
+</span></code></pre></div></p>
+<hr />
+<h2 id="6-identifier-rules-per-dialect">6. Identifier rules per dialect</h2>
+<table>
+<thead>
+<tr>
+<th>Dialect</th>
+<th>Table/column quoting</th>
+<th><code>::</code> → <code>_</code></th>
+<th>Case sensitivity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PostgreSQL</td>
+<td><code>"identifier"</code></td>
+<td>Yes</td>
+<td>Preserved (quoted)</td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td><code>`identifier`</code></td>
+<td>Yes</td>
+<td>Preserved (quoted, but depends on OS/file system)</td>
+</tr>
+<tr>
+<td>SQLite3</td>
+<td><code>"identifier"</code></td>
+<td>Yes</td>
+<td>Preserved (quoted)</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>sanitize_name()</code> function replaces all <code>::</code> with <code>_</code> so C++ qualified names like <code>sn::typecheck::Record</code> become <code>sn__typecheck__Record</code>.</p>
+<hr />
+<h2 id="7-test-coverage">7. Test coverage</h2>
+<p>All 11 existing fixtures are reused for SQL testing, yielding 33 SQL-specific tests (11 fixtures × 3 dialects). The HDF5 tests (11 tests) remain unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Fixture</th>
+<th>What it exercises</th>
+<th>PostgreSQL</th>
+<th>MySQL</th>
+<th>SQLite3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>primitives</code></td>
+<td>All primitive type mappings</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>typedef</code></td>
+<td>Typedef resolution</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>nested-ns</code></td>
+<td>Namespace nesting → table naming</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>embedded-pod</code></td>
+<td>Nested structs + 1D arrays</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>array-of-arrays</code></td>
+<td>Multi-dim arrays of structs</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>ignored-non-pod</code></td>
+<td>Non-POD skipped</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>unreferenced</code></td>
+<td>Unreferenced types skipped</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>topological</code></td>
+<td>Multiple related structs</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>enum-member</code></td>
+<td>Enum → INTEGER</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>multi-array</code></td>
+<td>Multi-dim primitive arrays</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><code>inheritance</code></td>
+<td>Inheritance skipped</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-attribute-wiring-status">8. Attribute wiring status</h2>
+<h3 id="not-yet-wired-staging-branch-30-pattern">Not yet wired (staging branch #30 pattern)</h3>
+<p>The <code>sql::</code> attribute namespace is <strong>defined in this taxonomy</strong> but not yet implemented in the attribute rewriter (<code>h5_attr_translator.hpp</code>) or consumed in the SQL producer. The staging branch uses the producer/consumer pattern; attribute integration would follow the same <code>h5_attr_reader</code> + <code>clang::annotate</code> rewrite path used for <code>h5::</code> attributes (issue #32).</p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Where read (planned)</th>
+<th>Where emitted (planned)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sql::table</code></td>
+<td><code>h5_attr_reader::read_class_string(node, "sql::table")</code></td>
+<td>Overrides table name in <code>record_decl_impl</code></td>
+</tr>
+<tr>
+<td><code>sql::column</code></td>
+<td><code>h5_attr_reader::read_field_string(fld, "sql::column")</code></td>
+<td>Overrides column name in <code>type_insert_impl</code></td>
+</tr>
+<tr>
+<td><code>sql::primary_key</code></td>
+<td><code>h5_attr_reader::has_attr(fld, "sql::primary_key")</code></td>
+<td>Appends <code>PRIMARY KEY</code> to column definition</td>
+</tr>
+<tr>
+<td><code>sql::unique</code></td>
+<td><code>h5_attr_reader::has_attr(fld, "sql::unique")</code></td>
+<td>Appends <code>UNIQUE</code> to column definition</td>
+</tr>
+<tr>
+<td><code>sql::not_null</code></td>
+<td><code>h5_attr_reader::has_attr(fld, "sql::not_null")</code></td>
+<td>Emits <code>NOT NULL</code> (default anyway)</td>
+</tr>
+<tr>
+<td><code>sql::default_</code></td>
+<td><code>h5_attr_reader::read_field_string(fld, "sql::default_")</code></td>
+<td>Appends <code>DEFAULT value</code></td>
+</tr>
+<tr>
+<td><code>sql::foreign_key</code></td>
+<td><code>h5_attr_reader::read_field_string(fld, "sql::foreign_key")</code></td>
+<td>Appends <code>REFERENCES ...</code></td>
+</tr>
+<tr>
+<td><code>sql::check</code></td>
+<td><code>h5_attr_reader::read_field_string(fld, "sql::check")</code></td>
+<td>Emits <code>CHECK (expr)</code> on column or table</td>
+</tr>
+<tr>
+<td><code>sql::index</code></td>
+<td><code>h5_attr_reader::has_attr(fld, "sql::index")</code></td>
+<td>Emits <code>CREATE INDEX</code> after table DDL</td>
+</tr>
+<tr>
+<td><code>sql::type_override</code></td>
+<td><code>h5_attr_reader::read_field_string(fld, "sql::type_override")</code></td>
+<td>Replaces mapped type in <code>type_insert_impl</code></td>
+</tr>
+<tr>
+<td><code>sql::nested</code></td>
+<td><code>h5_attr_reader::read_field_string(fld, "sql::nested")</code></td>
+<td>Controls JSONB/JSON/TEXT vs separate table</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-design-decisions">9. Design decisions</h2>
+<h3 id="decided">Decided</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Decision</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Three separate producer types</strong> (<code>SqlProducer&lt;postgres&gt;</code>, <code>SqlProducer&lt;mysql&gt;</code>, <code>SqlProducer&lt;sqlite3&gt;</code>) via CRTP template</td>
+<td>Clean separation of type maps; zero runtime overhead; follows existing <code>H5Producer</code> pattern.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Nested structs → JSON/JSONB/TEXT</strong></td>
+<td>SQL has no native nested struct type. Flattening would require changing the consumer; JSON is the pragmatic SQL-native approach.</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Arrays → <code>T[]</code> (PostgreSQL) or JSON/TEXT (MySQL/SQLite3)</strong></td>
+<td>PostgreSQL has native arrays; MySQL and SQLite3 do not. Consistent fallback to JSON/TEXT for the latter two.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>All fields <code>NOT NULL</code> by default</strong></td>
+<td>C++ POD fields are always present. <code>std::optional&lt;T&gt;</code> (when supported) would omit <code>NOT NULL</code>.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Separate <code>CREATE TABLE</code> per struct</strong></td>
+<td>Topological ordering from the consumer naturally yields one table per struct. Each struct is self-contained DDL.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Sanitize <code>::</code> → <code>_</code></strong></td>
+<td><code>::</code> is not valid in unquoted SQL identifiers. Quoted identifiers could preserve it, but <code>_</code> is cleaner and more portable.</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>No <code>DROP TABLE IF EXISTS</code></strong></td>
+<td>The emitted DDL is idempotent (<code>CREATE TABLE IF NOT EXISTS</code>) and non-destructive.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="open">Open</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>Context</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Attribute wiring.</strong></td>
+<td>When should <code>sql::</code> attributes be added to <code>h5_attr_translator.hpp</code>? After issue #32 (<code>h5::</code> attributes) is merged to staging, or in parallel?</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong><code>sql::nested("table")</code> semantics.</strong></td>
+<td>If a user requests separate-table nesting, should the compiler emit a foreign key column (<code>INTEGER REFERENCES inner(id)</code>) or a join table?</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong><code>std::optional&lt;T&gt;</code> support.</strong></td>
+<td>The staging branch consumer does not yet traverse <code>std::optional</code>. Once #32 adds it, SQL should emit nullable columns.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Index emission.</strong></td>
+<td>Should <code>sql::index</code> emit <code>CREATE INDEX</code> inline after the table, or collect all indexes and emit them at the end of the file?</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Multi-table FKs.</strong></td>
+<td>For <code>topological</code> fixtures with multiple related structs, should the compiler auto-emit foreign keys between tables?</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Type override dialect scoping.</strong></td>
+<td>Should <code>sql::type_override("VARCHAR(255)")</code> apply to all dialects, or should there be <code>sql::type_override_postgres</code>, <code>sql::type_override_mysql</code>, etc.?</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-sources">10. Sources</h2>
+<ul>
+<li><code>tasks/h5cpp-compiler-backend-cookbook.md</code> (workspace) — transferable recipe for adding any new backend</li>
+<li><code>tasks/h5cpp-compiler-h5-attribute-taxonomy.md</code> (workspace) — HDF5 attribute vocabulary</li>
+<li><code>vargalabs/h5cpp-compiler#30</code> — Unified <code>--format</code> dispatcher and producer/consumer pattern</li>
+<li><code>vargalabs/h5cpp-compiler#33</code> — <code>src/producer_sql.hpp</code>, <code>src/h5cpp.cpp</code>, <code>tests/CMakeLists.txt</code></li>
+<li>PostgreSQL 16 Data Types: https://www.postgresql.org/docs/current/datatype.html</li>
+<li>MySQL 8.0 Data Types: https://dev.mysql.com/doc/refman/8.0/en/data-types.html</li>
+<li>SQLite3 Datatypes: https://www.sqlite.org/datatype3.html</li>
+</ul>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright custom-footer">
+        <div class="custom-footer-left">
+          Blockchain, cryptographic protocols, HPC, or trading systems in C++, Rust, Julia, Python, R and CUDA
+        </div>
+        <div class="custom-footer-right">
+          © 2017–2025 Varga Consulting, Toronto, ON, Canada 🇨🇦
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "search.suggest", "content.code.copy", "content.tooltips"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://cdn.tailwindcss.com"></script>
+      
+        <script src="../javascripts/tw-config.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.0.1/dist/bundle/asciinema-player.js"></script>
+      
+    
+  </body>
+</html>
