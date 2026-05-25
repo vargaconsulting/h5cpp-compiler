@@ -167,6 +167,11 @@ public :
 				compress_algo = compress_strs.empty() ? "gzip" : compress_strs[0];
 			}
 
+			if (Result.Context) {
+				std::string hdr = get_header_name(node, Result.Context->getSourceManager());
+				if (!hdr.empty())
+					producer.add_include(hdr);
+			}
 			producer.scatter_type(rn, fields, chunk_size, compress_algo, compress_level, doc, alias, version, on_missing);
 		}
 	}

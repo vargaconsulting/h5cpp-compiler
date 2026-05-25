@@ -36,7 +36,8 @@ clang::ast_matchers::StatementMatcher h5templateMatcher = clang::ast_matchers::c
 		clang::ast_matchers::functionDecl( clang::ast_matchers::allOf(
 			clang::ast_matchers::eachOf(
 				clang::ast_matchers::hasName("h5::write"),  clang::ast_matchers::hasName("h5::create"),  clang::ast_matchers::hasName("h5::read"), clang::ast_matchers::hasName("h5::append"),
-				clang::ast_matchers::hasName("h5::awrite"), clang::ast_matchers::hasName("h5::acreate"), clang::ast_matchers::hasName("h5::aread")
+				clang::ast_matchers::hasName("h5::awrite"), clang::ast_matchers::hasName("h5::acreate"), clang::ast_matchers::hasName("h5::aread"),
+				clang::ast_matchers::hasName("h5::scatter"), clang::ast_matchers::hasName("h5::gather")
 			),
 			clang::ast_matchers::hasTemplateArgument(0,  clang::ast_matchers::refersToType( clang::ast_matchers::qualType( clang::ast_matchers::eachOf(
 				clang::ast_matchers::hasDeclaration( clang::ast_matchers::cxxRecordDecl(clang::ast_matchers::isStruct()).bind("cxxRecordDecl")),
