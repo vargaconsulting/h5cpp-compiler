@@ -20,13 +20,13 @@
 template <typename Producer> class H5TemplateCallback : public clang::ast_matchers::MatchFinder::MatchCallback {
 public :
 
-	H5TemplateCallback(const std::string& path){
-		io.open( path );
+	H5TemplateCallback(const std::string& path) : path_(path) {
 		producer.file_begin();
 	}
 
 	~H5TemplateCallback(){
 		producer.file_end();
+		io.open(path_);
 		io << producer;
 		io.close();
 	}
@@ -221,6 +221,7 @@ private:
 	}
 
 	std::ofstream io;
+	std::string path_;
 	Producer producer;
 	std::set<const void*> unique, nodes;
 	std::deque<std::pair<utils::type, const void*>> store;
