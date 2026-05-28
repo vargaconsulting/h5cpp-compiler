@@ -129,6 +129,17 @@ int main(int argc, const char **argv) {
 	clang::tooling::ClangTool Tool(OptionsParser.getCompilations(),
 				 OptionsParser.getSourcePathList());
 
+	// During the AST-scan pass that produces generated.h, the user's
+	// H5CPP_REGISTER_STRUCT macros haven't fired yet (generated.h is the
+	// empty virtual stub mapped below). The h5cpp headers gate their
+	// "storage_representation_v<T> == unsupported" static_asserts on
+	// H5CPP_BUILDING_TYPE_INFO so they don't fire in this bootstrap context;
+	// they remain active for regular user compilation where generated.h exists.
+	Tool.appendArgumentsAdjuster(
+		clang::tooling::getInsertArgumentAdjuster(
+			"-DH5CPP_BUILDING_TYPE_INFO",
+			clang::tooling::ArgumentInsertPosition::BEGIN));
+
 	// Issue #32: rewrite [[h5::xxx(...)]] → [[clang::annotate("h5::xxx", ...)]]
 	// for each source path before Clang sees it.
 	std::vector<std::string> _h5_attr_storage;
@@ -140,6 +151,18 @@ int main(int argc, const char **argv) {
 	std::vector<std::string> _pb_attr_storage;
 	pb_attr_translator::install_virtual_files(
 		Tool, OptionsParser.getSourcePathList(), _pb_attr_storage);
+
+	// Issue #34 follow-up: break the chicken-and-egg between the source's
+	// `#include "generated.h"` and the consumer (which writes the file at
+	// destructor time, per 76c38d8). Without this, clang's preprocessor errors
+	// out before the AST matchers ever fire and no output is produced.
+	// Install an empty virtual header at OutputFile; the real content overwrites
+	// the on-disk file when the consumer destructs.
+	std::string _empty_generated_storage;
+	if (!OutputFile.empty()) {
+		_empty_generated_storage = "#pragma once\n";
+		Tool.mapVirtualFile(OutputFile, _empty_generated_storage);
+	}
 
 	std::string work_path = OutputFile;
 	if (CheckMode) {
