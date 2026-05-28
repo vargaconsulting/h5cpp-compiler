@@ -26,6 +26,8 @@ struct SqlProducer : Producer<SqlProducer<D>> {
 
     void file_end_impl() {}
 
+    void add_include_impl(const std::string& /*path*/) {}
+
     void template_decl_impl(const std::string& record,
                             const std::string& /*doc*/ = "",
                             const std::string& /*alias*/ = "",
