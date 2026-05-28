@@ -1,8 +1,6 @@
 #pragma once
 
-#include <hdf5.h>
 #include <h5cpp/all>
-
 namespace h5 {
     template<> hid_t inline register_struct<sn::sensor::serialize_full_t>(){
 
