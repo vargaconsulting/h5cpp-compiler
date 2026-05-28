@@ -1,0 +1,48 @@
+# Alpine edge with musl — fully static h5cpp-compiler build
+FROM docker.io/library/alpine:edge
+
+RUN apk update && apk add --no-cache \
+    build-base \
+    cmake \
+    ninja \
+    llvm20-dev \
+    llvm20-static \
+    clang20-dev \
+    clang20-static \
+    zlib-dev \
+    zlib-static \
+    zstd-dev \
+    zstd-static \
+    libxml2-dev \
+    libxml2-static \
+    libffi-dev \
+    linux-headers
+
+# Alpine's llvm20-dev / clang20-dev CMake exports reference every target LLVM
+# can build, but the -static subpackage only ships the libraries needed for
+# normal linking.  We create empty archives for the missing testing libs and
+# downgrade the existence-check FATAL_ERROR to WARNING so configure succeeds.
+RUN for lib in LLVMTestingAnnotations LLVMTestingSupport llvm_gtest llvm_gtest_main LTO LLVMgold LLVM Remarks; do \
+        ar rcs /usr/lib/llvm20/lib/lib${lib}.a; \
+    done && \
+    for f in /usr/lib/llvm20/lib/cmake/llvm/LLVMExports.cmake \
+             /usr/lib/llvm20/lib/cmake/llvm/LLVMExports-release.cmake \
+             /usr/lib/llvm20/lib/cmake/clang/ClangTargets.cmake \
+             /usr/lib/llvm20/lib/cmake/clang/ClangTargets-release.cmake; do \
+        [ -f "$f" ] && sed -i 's/message(FATAL_ERROR/message(WARNING/g' "$f"; \
+    done
+
+WORKDIR /src
+COPY . .
+
+RUN cmake -S . -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DH5CPP_STATIC_LINK_LLVM=ON \
+    -DCMAKE_EXE_LINKER_FLAGS="-static" \
+    -DLLVM_DIR=/usr/lib/llvm20/lib/cmake/llvm \
+    -DClang_DIR=/usr/lib/llvm20/lib/cmake/clang
+
+RUN cmake --build build --parallel
+
+# Verify it is static
+RUN file build/h5cpp && (ldd build/h5cpp 2>/dev/null || echo "Not a dynamic executable (good)")

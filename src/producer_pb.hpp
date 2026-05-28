@@ -33,6 +33,8 @@ struct PbProducer : Producer<PbProducer> {
         io << "\n";
     }
 
+    void add_include_impl(const std::string& /*path*/) {}
+
     // template_decl is the per-record opener. `record` is the qualified type
     // name (e.g. "::sn::sensor::reading_t"). Each record's descriptor_t is a
     // standalone specialization at file scope.

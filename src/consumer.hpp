@@ -20,13 +20,13 @@
 template <typename Producer> class H5TemplateCallback : public clang::ast_matchers::MatchFinder::MatchCallback {
 public :
 
-	H5TemplateCallback(const std::string& path){
-		io.open( path );
+	H5TemplateCallback(const std::string& path) : path_(path) {
 		producer.file_begin();
 	}
 
 	~H5TemplateCallback(){
 		producer.file_end();
+		io.open(path_);
 		io << producer;
 		io.close();
 	}
@@ -56,6 +56,18 @@ public :
 		if( tier == utils::tier::pod ){
 			// --- tier 1: standard register_struct emission ---
 			topological_order( node );
+				// collect header files for all records before emitting preamble
+				if( Result.Context ) {
+					for( const auto& item : store ) {
+						if( item.first == utils::type::record ) {
+							auto rec = utils::as<const clang::CXXRecordDecl*>( item.second );
+							std::string hdr = get_header_name(rec, Result.Context->getSourceManager());
+							if( !hdr.empty() )
+								producer.add_include(hdr);
+						}
+					}
+				}
+
 			producer.template_decl( rn, doc, alias, version );
 
 			std::string var, type;
@@ -74,6 +86,11 @@ public :
 					break;
 					case utils::type::record:
 						re = utils::as<const clang::CXXRecordDecl*>( node.second );
+						if( Result.Context ) {
+							std::string hdr = get_header_name(re, Result.Context->getSourceManager());
+							if( !hdr.empty() )
+								producer.add_include(hdr);
+						}
 						var = producer.record_decl( utils::type_name( re ) );
 						for(clang::FieldDecl* fld: re->fields() ){
 							// Issue #32: skip fields annotated with [[h5::ignore]]
@@ -98,7 +115,7 @@ public :
 					default:
 						break;
 				}
-				store.pop();
+				store.pop_front();
 			}
 			producer.type_release();
 			producer.return_type( var );
@@ -150,6 +167,11 @@ public :
 				compress_algo = compress_strs.empty() ? "gzip" : compress_strs[0];
 			}
 
+			if (Result.Context) {
+				std::string hdr = get_header_name(node, Result.Context->getSourceManager());
+				if (!hdr.empty())
+					producer.add_include(hdr);
+			}
 			producer.scatter_type(rn, fields, chunk_size, compress_algo, compress_level, doc, alias, version, on_missing);
 		}
 	}
@@ -160,7 +182,7 @@ private:
 			topological_order( utils::as<const clang::QualType>( fld ) );
 		auto it = unique.insert( node );
 		if( it.second )
-			store.push( {utils::type::record, node} );
+			store.push_back( {utils::type::record, node} );
 	}
 
 	void topological_order(const clang::QualType& qt){
@@ -173,7 +195,7 @@ private:
 				topological_order( ar->getElementType() );
 				it = unique.insert( ar );
 				if( it.second )
-			   		store.push({utils::type::array, ar});
+			   		store.push_back({utils::type::array, ar});
 				break;
 
 			case utils::type::record:
@@ -184,8 +206,23 @@ private:
 		}
 	}
 
+	static std::string get_header_name(const clang::CXXRecordDecl* decl, const clang::SourceManager& sm){
+		if( !decl ) return "";
+		clang::SourceLocation loc = decl->getLocation();
+		if( !loc.isValid() ) return "";
+		llvm::StringRef path = sm.getFilename(loc);
+		if( path.size() < 3 ) return "";
+		if( !(path.ends_with(".h") || path.ends_with(".hpp") || path.ends_with(".hxx") || path.ends_with(".hh")) )
+			return "";
+		size_t pos = path.rfind('/');
+		if( pos == llvm::StringRef::npos )
+			return path.str();
+		return path.substr(pos + 1).str();
+	}
+
 	std::ofstream io;
+	std::string path_;
 	Producer producer;
 	std::set<const void*> unique, nodes;
-	std::queue<std::pair<utils::type, const void*>> store;
+	std::deque<std::pair<utils::type, const void*>> store;
 };

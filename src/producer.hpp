@@ -72,6 +72,10 @@ struct Producer {
 		static_cast<Derived*>(this)->type_release_impl();
 	}
 
+	void add_include(const std::string& path){
+		static_cast<Derived*>(this)->add_include_impl(path);
+	}
+
 	// Issue #32: scatter/gather emission for tier-2 types.
 	struct scatter_field_t {
 		std::string cpp_name;    // C++ field name

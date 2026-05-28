@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <set>
 
 struct H5Producer : Producer<H5Producer> {
 	H5Producer(){
@@ -26,10 +27,32 @@ struct H5Producer : Producer<H5Producer> {
 		};
 	}
 
+	std::set<std::string> includes;
+	std::set<std::string> emitted_includes;
+	bool preamble_done = false;
+
 	void file_begin_impl(){
-		io << "#pragma once" << std::endl << std::endl;
-		io << "#include <hdf5.h>" << std::endl;
-		io << "#include <h5cpp/all>" << std::endl << std::endl;
+	}
+
+	void add_include_impl(const std::string& path){
+		includes.insert(path);
+	}
+
+	void ensure_preamble(){
+		if (!preamble_done) {
+			io << "#pragma once" << std::endl << std::endl;
+			io << "#include <h5cpp/all>" << std::endl;
+			preamble_done = true;
+		}
+		bool any_new = false;
+		for (const auto& inc : includes) {
+			if (emitted_includes.insert(inc).second) {
+				io << "#include \"" << inc << "\"" << std::endl;
+				any_new = true;
+			}
+		}
+		if (any_new)
+			io << std::endl;
 	}
 
 	void file_end_impl(){
@@ -38,6 +61,7 @@ struct H5Producer : Producer<H5Producer> {
 
 	void template_decl_impl(const std::string& record, const std::string& doc,
 	                        const std::string& alias, const std::string& version){
+		ensure_preamble();
 		record_name = record;
 		if( !doc.empty() )    io << "// doc: \""    << doc    << "\"\n";
 		if( !alias.empty() )  io << "// alias: \""  << alias  << "\"\n";
@@ -97,44 +121,50 @@ struct H5Producer : Producer<H5Producer> {
 	                       const std::string& alias,
 	                       const std::string& version,
 	                       const std::string& on_missing){
+		ensure_preamble();
 		// Generate a valid namespace identifier from the record name or alias.
 		std::string ns_name = (alias.empty() ? record_name : alias) + "_";
 		std::replace(ns_name.begin(), ns_name.end(), ':', '_');
 
 		// --- generated namespace: row_t + compound_type() ---
+		// Contents indented one level (4 spaces) inside the namespace block.
 		if( !doc.empty() )    io << "// doc: \""    << doc    << "\"\n";
 		if( !alias.empty() )  io << "// alias: \""  << alias  << "\"\n";
 		if( !version.empty() ) io << "// version: \"" << version << "\"\n";
-		io << "namespace h5::generated::" << ns_name << " {\n\n";
+		io << "namespace h5::generated::" << ns_name << " {\n";
 
-		// row_t struct
-		io << "struct row_t {\n";
+		// row_t struct (4-space indent for struct, 8-space for members)
+		io << "    struct row_t {\n";
 		for (const auto& f : fields) {
 			if (f.is_vlen) {
-				io << "    hvl_t    " << f.cpp_name << ";\n";
+				if (f.is_string) {
+					io << "        char*    " << f.cpp_name << ";\n";
+				} else {
+					io << "        hvl_t    " << f.cpp_name << ";\n";
+				}
 			} else {
-				io << "    " << f.cpp_type << " " << f.cpp_name << ";\n";
+				io << "        " << f.cpp_type << " " << f.cpp_name << ";\n";
 			}
 		}
-		io << "};\n\n";
+		io << "    };\n";
 
-		// compound_type() factory
-		io << "inline hid_t compound_type() {\n"
-		   << "    static const hid_t ct = []{\n";
+		// compound_type() factory (4-space for function, 8-space inside, 12-space inside lambda)
+		io << "    inline hid_t compound_type() {\n"
+		   << "        static const hid_t ct = []{\n";
 
 		// Emit VLEN / string type helpers for vlen fields
 		for (const auto& f : fields) {
 			if (!f.is_vlen) continue;
 			std::string var = "v_" + f.cpp_name;
 			if (f.is_string) {
-				io << "        hid_t " << var << " = H5Tcopy(H5T_C_S1);\n"
-				   << "        H5Tset_size(" << var << ", H5T_VARIABLE);\n";
+				io << "            hid_t " << var << " = H5Tcopy(H5T_C_S1);\n"
+				   << "            H5Tset_size(" << var << ", H5T_VARIABLE);\n";
 			} else {
-				io << "        hid_t " << var << " = H5Tvlen_create(" << f.h5_type << ");\n";
+				io << "            hid_t " << var << " = H5Tvlen_create(" << f.h5_type << ");\n";
 			}
 		}
 
-		io << "        hid_t ct = H5Tcreate(H5T_COMPOUND, sizeof(row_t));\n";
+		io << "            hid_t ct = H5Tcreate(H5T_COMPOUND, sizeof(row_t));\n";
 		for (const auto& f : fields) {
 			std::string type_expr;
 			if (f.is_vlen) {
@@ -142,128 +172,137 @@ struct H5Producer : Producer<H5Producer> {
 			} else {
 				type_expr = f.h5_type;
 			}
-			io << "        H5Tinsert(ct, \"" << f.h5_name << "\", HOFFSET(row_t, "
+			io << "            H5Tinsert(ct, \"" << f.h5_name << "\", HOFFSET(row_t, "
 			   << f.cpp_name << "), " << type_expr << ");\n";
 		}
-		io << "        return ct;\n"
-		   << "    }();\n"
-		   << "    return ct;\n"
-		   << "}\n\n"
+		io << "            return ct;\n"
+		   << "        }();\n"
+		   << "        return ct;\n"
+		   << "    }\n"
 		   << "} // namespace h5::generated::" << ns_name << "\n\n";
 
 		// --- scatter<T> specialization ---
+		// Template + body indented one level (4 spaces) inside `namespace h5 {`.
 		io << "namespace h5 {\n"
-		   << "template<> inline h5::ds_t scatter<" << record_name << ">(\n"
-		   << "    hid_t fd, const std::string& path, const " << record_name << "& obj) {\n"
-		   << "    using namespace ::h5::generated::" << ns_name << ";\n"
-		   << "    h5::ds_t ds;\n"
-		   << "    h5::mute();\n"
-		   << "    bool exists = H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0;\n"
-		   << "    h5::unmute();\n";
+		   << "    template<> inline h5::ds_t scatter<" << record_name << ">(\n"
+		   << "        hid_t fd, const std::string& path, const " << record_name << "& obj) {\n"
+		   << "        using namespace ::h5::generated::" << ns_name << ";\n"
+		   << "        h5::ds_t ds;\n"
+		   << "        h5::mute();\n"
+		   << "        bool exists = H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0;\n"
+		   << "        h5::unmute();\n";
 		if( on_missing == "error" ){
-			io << "    if (!exists) {\n"
-			   << "        throw std::runtime_error(\"dataset not found: \" + path);\n"
-			   << "    }\n"
-			   << "    ds = h5::open(fd, path, h5::default_dapl);\n";
+			io << "        if (!exists) throw std::runtime_error(\"dataset not found: \" + path);\n"
+			   << "        ds = h5::open(fd, path, h5::default_dapl);\n";
 		} else if( on_missing == "ignore" ){
-			io << "    if (!exists) {\n"
-			   << "        return ds;\n"
-			   << "    }\n"
-			   << "    ds = h5::open(fd, path, h5::default_dapl);\n";
+			io << "        if (!exists) return ds;\n"
+			   << "        ds = h5::open(fd, path, h5::default_dapl);\n";
 		} else {
-			io << "    if (exists) {\n"
-			   << "        ds = h5::open(fd, path, h5::default_dapl);\n"
-			   << "    } else {\n"
-			   << "        h5::dcpl_t dcpl{H5Pcreate(H5P_DATASET_CREATE)};\n"
-			   << "        hsize_t chunk = " << chunk_size << ";\n"
-			   << "        H5Pset_chunk(dcpl, 1, &chunk);\n";
+			// Flipped: larger branch (create) on top; smaller (open) becomes a
+			// single-statement trailing else with no braces.
+			io << "        if (!exists) {\n"
+			   << "            h5::dcpl_t dcpl{H5Pcreate(H5P_DATASET_CREATE)};\n"
+			   << "            hsize_t chunk = " << chunk_size << ";\n"
+			   << "            H5Pset_chunk(dcpl, 1, &chunk);\n";
 			if (!compress_algo.empty()) {
 				if (compress_algo == "gzip") {
-					io << "        H5Pset_deflate(dcpl, " << compress_level << ");\n";
+					io << "            H5Pset_deflate(dcpl, " << compress_level << ");\n";
 				}
 			}
 			io
-			   << "        hsize_t cur = 0;\n"
-			   << "        hsize_t max = H5S_UNLIMITED;\n"
-			   << "        hid_t space = H5Screate_simple(1, &cur, &max);\n"
-			   << "        ds = h5::createds(fd, path, compound_type(), h5::sp_t{space},\n"
-			   << "            h5::default_lcpl, dcpl, h5::default_dapl);\n"
-			   << "    }\n";
+			   << "            hsize_t cur = 0;\n"
+			   << "            hsize_t max = H5S_UNLIMITED;\n"
+			   << "            hid_t space = H5Screate_simple(1, &cur, &max);\n"
+			   << "            ds = h5::createds(fd, path, compound_type(), h5::sp_t{space},\n"
+			   << "                h5::default_lcpl, dcpl, h5::default_dapl);\n"
+			   << "        } else ds = h5::open(fd, path, h5::default_dapl);\n";
 		}
-		io << "    hsize_t row = h5::detail::next_row(ds);\n";
+		io << "        hsize_t row = h5::detail::next_row(ds);\n";
 
 		// Pre-compute vlen helper variables (size + data pointer)
 		for (const auto& f : fields) {
 			if (!f.is_vlen) continue;
-			io << "    hsize_t " << f.cpp_name << "_len = obj." << f.cpp_name << ".size();\n";
+			io << "        hsize_t " << f.cpp_name << "_len = obj." << f.cpp_name << ".size();\n";
 			if (f.is_string) {
-				io << "    const char* " << f.cpp_name << "_ptr = obj." << f.cpp_name << ".c_str();\n";
+				io << "        const char* " << f.cpp_name << "_ptr = obj." << f.cpp_name << ".c_str();\n";
 			} else {
-				io << "    auto* " << f.cpp_name << "_ptr = obj." << f.cpp_name << ".data();\n";
+				io << "        auto* " << f.cpp_name << "_ptr = obj." << f.cpp_name << ".data();\n";
 			}
 		}
 
-		io << "    row_t r{\n";
+		io << "        row_t r{\n";
 		for (std::size_t i = 0; i < fields.size(); ++i) {
 			const auto& f = fields[i];
-			io << "        ";
+			io << "            ";
 			if (f.is_vlen) {
-				io << "hvl_t{" << f.cpp_name << "_len, (void*)" << f.cpp_name << "_ptr}";
+				if (f.is_string) {
+					io << "(char*)" << f.cpp_name << "_ptr";
+				} else {
+					io << "hvl_t{" << f.cpp_name << "_len, (void*)" << f.cpp_name << "_ptr}";
+				}
 			} else {
 				io << "obj." << f.cpp_name;
 			}
 			io << (i + 1 < fields.size() ? ",\n" : "\n");
 		}
-		io << "    };\n";
+		io << "        };\n";
 
-		io << "    herr_t err = h5::detail::write_one_row(ds, compound_type(), row, &r);\n"
-		   << "    (void)err;\n"
-		   << "    return ds;\n"
-		   << "}\n"
+		io << "        herr_t err = h5::detail::write_one_row(ds, compound_type(), row, &r);\n"
+		   << "        (void)err;\n"
+		   << "        return ds;\n"
+		   << "    }\n"
 		   << "} // namespace h5\n\n";
 
 		// --- gather<T> specialization ---
+		// Same indentation scheme as scatter above.
 		io << "namespace h5 {\n"
-		   << "template<> inline void gather<" << record_name << ">(\n"
-		   << "    hid_t fd, const std::string& path, " << record_name << "& obj) {\n"
-		   << "    using namespace ::h5::generated::" << ns_name << ";\n";
+		   << "    template<> inline void gather<" << record_name << ">(\n"
+		   << "        hid_t fd, const std::string& path, " << record_name << "& obj) {\n"
+		   << "        using namespace ::h5::generated::" << ns_name << ";\n";
 		if( on_missing == "error" || on_missing == "ignore" ){
-			io << "    h5::mute();\n"
-			   << "    bool exists = H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0;\n"
-			   << "    h5::unmute();\n";
+			io << "        h5::mute();\n"
+			   << "        bool exists = H5Lexists(fd, path.c_str(), H5P_DEFAULT) > 0;\n"
+			   << "        h5::unmute();\n";
 			if( on_missing == "error" ){
-				io << "    if (!exists) {\n"
-				   << "        throw std::runtime_error(\"dataset not found: \" + path);\n"
-				   << "    }\n";
+				io << "        if (!exists) throw std::runtime_error(\"dataset not found: \" + path);\n";
 			} else {
-				io << "    if (!exists) {\n"
-				   << "        return;\n"
-				   << "    }\n";
+				io << "        if (!exists) return;\n";
 			}
 		}
-		io << "    h5::ds_t ds = h5::open(fd, path, h5::default_dapl);\n"
-		   << "    hsize_t nrows = h5::detail::next_row(ds);\n"
-		   << "    if (nrows == 0) return;\n"
-		   << "    row_t r{};\n"
-		   << "    herr_t err = h5::detail::read_one_row(ds, compound_type(), nrows - 1, &r);\n"
-		   << "    (void)err;\n";
+		io << "        h5::ds_t ds = h5::open(fd, path, h5::default_dapl);\n"
+		   << "        hsize_t nrows = h5::detail::next_row(ds);\n"
+		   << "        if (nrows == 0) return;\n"
+		   << "        row_t r{};\n"
+		   << "        herr_t err = h5::detail::read_one_row(ds, compound_type(), nrows - 1, &r);\n"
+		   << "        (void)err;\n";
 
 		for (const auto& f : fields) {
 			if (f.is_vlen) {
 				if (f.is_string) {
-					io << "    obj." << f.cpp_name << ".assign(static_cast<char*>(r."
-					   << f.cpp_name << ".p), r." << f.cpp_name << ".len);\n";
+					io << "        if (r." << f.cpp_name << ") obj." << f.cpp_name << ".assign(r."
+					   << f.cpp_name << ");\n";
 				} else {
-					io << "    obj." << f.cpp_name << ".assign(static_cast<" << f.cpp_type
+					io << "        obj." << f.cpp_name << ".assign(static_cast<" << f.cpp_type
 					   << "*>(r." << f.cpp_name << ".p), static_cast<" << f.cpp_type
 					   << "*>(r." << f.cpp_name << ".p) + r." << f.cpp_name << ".len);\n";
 				}
 			} else {
-				io << "    obj." << f.cpp_name << " = r." << f.cpp_name << ";\n";
+				io << "        obj." << f.cpp_name << " = r." << f.cpp_name << ";\n";
 			}
 		}
-		io << "    H5Treclaim(compound_type(), H5S_ALL, H5P_DEFAULT, &r);\n"
-		   << "}\n"
+		// Use the HDF5 version-aware reclaim API:
+		//   HDF5 >= 1.12: H5Treclaim (canonical name; the old H5Dvlen_reclaim is
+		//                 deprecated and may be hidden when the library is built
+		//                 with H5_NO_DEPRECATED_SYMBOLS).
+		//   HDF5  < 1.12: H5Dvlen_reclaim (the only available spelling).
+		io << "        hid_t reclaim_space = H5Screate(H5S_SCALAR);\n"
+		   << "        #if H5_VERSION_GE(1,12,0)\n"
+		   << "            H5Treclaim(compound_type(), reclaim_space, H5P_DEFAULT, &r);\n"
+		   << "        #else\n"
+		   << "            H5Dvlen_reclaim(compound_type(), reclaim_space, H5P_DEFAULT, &r);\n"
+		   << "        #endif\n"
+		   << "        H5Sclose(reclaim_space);\n"
+		   << "    }\n"
 		   << "} // namespace h5\n\n";
 
 		// --- registration macro ---
