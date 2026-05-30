@@ -1,0 +1,4 @@
+sources:
+  "1.12.6":
+    url: "https://github.com/vargalabs/h5cpp-compiler/archive/refs/tags/v1.12.6.tar.gz"
+    sha256: "PLACEHOLDER_SHA256"
