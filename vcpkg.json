@@ -1,0 +1,18 @@
+{
+  "name": "h5cpp-compiler",
+  "version": "1.12.6",
+  "description": "Source code transformation tool for HDF5 H5CPP library",
+  "homepage": "https://github.com/vargalabs/h5cpp-compiler",
+  "license": "MIT",
+  "supports": "!uwp",
+  "$comment": "h5cpp-compiler is compatible with LLVM 18+, 19+, and 20. vcpkg provides llvm at 18.1.6.",
+  "dependencies": [
+    {
+      "name": "llvm",
+      "features": [
+        "clang",
+        "tools"
+      ]
+    }
+  ]
+}
