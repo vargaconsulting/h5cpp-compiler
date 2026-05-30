@@ -1,0 +1,4 @@
+sources:
+  "1.12.6":
+    url: "https://github.com/vargalabs/h5cpp-compiler/archive/refs/tags/v1.12.6.tar.gz"
+    sha256: "c5f5829cec4908ad93647c17f27d0a82b75a5413fcad8c99232ba2034d0149a2"
