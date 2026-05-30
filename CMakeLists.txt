@@ -181,13 +181,14 @@ endif()
 
 # Install directives
 include(GNUInstallDirs)
-install(TARGETS h5cpp DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES h5cpp.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
+install(TARGETS h5cpp DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime)
+install(FILES h5cpp.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 COMPONENT runtime)
 
 # CMake helper modules for consumers
 install(
     DIRECTORY cmake/
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/h5cpp-compiler
+    COMPONENT runtime
     FILES_MATCHING PATTERN "*.cmake"
 )
 
@@ -215,7 +216,11 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Source code transformation tool for HDF5 
 set(CPACK_PACKAGE_CONTACT "steven@vargalabs.com")
 set(CPACK_PACKAGE_LICENSE "MIT")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYRIGHT.txt")
-set(CPACK_MONOLITHIC_INSTALL 1)
+# MONOLITHIC is safe for DEB/RPM, but breaks productbuild on macOS
+# (CMake #18201: empty distribution XML when monolithic + productbuild)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(CPACK_MONOLITHIC_INSTALL 1)
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
@@ -234,6 +239,12 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 include(CPack)
+
+cpack_add_component(runtime
+  DISPLAY_NAME "h5cpp-compiler"
+  DESCRIPTION "Source code transformation tool for HDF5 H5CPP library"
+  REQUIRED
+)
 
 option(H5CPP_BUILD_TESTS "Build h5cpp-compiler fixture tests" ON)
 if(H5CPP_BUILD_TESTS)

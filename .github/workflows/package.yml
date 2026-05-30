@@ -213,6 +213,15 @@ jobs:
           cpack -G "${{ matrix.generators }}" \
             -D "CPACK_PACKAGE_FILE_NAME=h5cpp-compiler-${H5CPP_VERSION}-${{ matrix.asset_suffix }}" \
             --config CPackConfig.cmake
+          # macOS guard: productbuild must produce a real payload
+          if [[ "${{ matrix.generators }}" == "productbuild" ]]; then
+            pkg="h5cpp-compiler-${H5CPP_VERSION}-${{ matrix.asset_suffix }}.pkg"
+            size=$(stat -f%z "$pkg" 2>/dev/null || stat -c%s "$pkg" 2>/dev/null)
+            if (( size < 100000 )); then
+              echo "macOS package is suspiciously small (${size} bytes) — likely empty" >&2
+              exit 1
+            fi
+          fi
         env:
           CPACK_DEBIAN_PACKAGE_ARCHITECTURE: ${{ matrix.deb_arch }}
           CPACK_RPM_PACKAGE_ARCHITECTURE: ${{ matrix.rpm_arch }}
