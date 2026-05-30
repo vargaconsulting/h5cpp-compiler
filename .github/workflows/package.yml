@@ -298,7 +298,7 @@ jobs:
           export WINEARCH=win64
 
           # Initialize Wine prefix silently
-          xvfb-run -a wine wineboot --init 2>/dev/null || true
+          xvfb-run -a wine64 wineboot --init 2>/dev/null || true
 
           # Locate the NSIS installer
           installer=( windows-artifact/h5cpp-compiler-*.exe )
@@ -308,7 +308,7 @@ jobs:
           fi
 
           # Silent install
-          xvfb-run -a wine "${installer[0]}" /S
+          xvfb-run -a wine64 "${installer[0]}" /S
 
           # Locate installed binary (glob handles versioned install dir)
           h5cpp_exe=( /tmp/wine-smoke/drive_c/Program\ Files/h5cpp-compiler/*/bin/h5cpp.exe )
@@ -318,7 +318,7 @@ jobs:
           fi
 
           # Run smoke test
-          output=$(xvfb-run -a wine "${h5cpp_exe[0]}" --version 2>&1)
+          output=$(xvfb-run -a wine64 "${h5cpp_exe[0]}" --version 2>&1)
           echo "$output"
 
           # Validate expected output
