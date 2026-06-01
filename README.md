@@ -160,6 +160,37 @@ sudo cmake --install build
 
 See `examples/cmake-integration/` for a complete working project.
 
+## vcpkg
+
+### Manifest mode
+
+If you use vcpkg in [manifest mode](https://learn.microsoft.com/en-us/vcpkg/concepts/manifest-mode), run the following from the project root after cloning:
+
+```bash
+vcpkg install
+```
+
+This reads the `vcpkg.json` manifest and resolves the `llvm` dependency (with `clang` and `tools` features).
+
+> **Note:** h5cpp-compiler is compatible with LLVM 18, 19, and 20. vcpkg currently provides `llvm` at 18.1.6.
+
+### Registry port
+
+To consume `h5cpp-compiler` through a custom vcpkg registry, copy the `vcpkg/` directory into your registry under `ports/h5cpp-compiler/`:
+
+```
+ports/
+  h5cpp-compiler/
+    portfile.cmake
+    vcpkg.json
+```
+
+Add the port to your registry `versions/baseline.json`, then install it with:
+
+```bash
+vcpkg install h5cpp-compiler
+```
+
 ## Compatibility
 
 | h5cpp-compiler | h5cpp library |

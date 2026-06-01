@@ -63,7 +63,11 @@ jobs:
         shell: bash
         run: |
           ref="${GITHUB_REF_NAME}"
-          echo "H5CPP_VERSION=${ref#v}" >> "$GITHUB_ENV"
+          if [[ "$ref" == v* ]]; then
+            echo "H5CPP_VERSION=${ref#v}" >> "$GITHUB_ENV"
+          else
+            echo "H5CPP_VERSION=1.12.99-test" >> "$GITHUB_ENV"
+          fi
 
       - name: Install LLVM toolchain (Linux)
         if: runner.os == 'Linux'
@@ -213,6 +217,15 @@ jobs:
           cpack -G "${{ matrix.generators }}" \
             -D "CPACK_PACKAGE_FILE_NAME=h5cpp-compiler-${H5CPP_VERSION}-${{ matrix.asset_suffix }}" \
             --config CPackConfig.cmake
+          # macOS guard: productbuild must produce a real payload
+          if [[ "${{ matrix.generators }}" == "productbuild" ]]; then
+            pkg="h5cpp-compiler-${H5CPP_VERSION}-${{ matrix.asset_suffix }}.pkg"
+            size=$(stat -f%z "$pkg" 2>/dev/null || stat -c%s "$pkg" 2>/dev/null)
+            if (( size < 100000 )); then
+              echo "macOS package is suspiciously small (${size} bytes) — likely empty" >&2
+              exit 1
+            fi
+          fi
         env:
           CPACK_DEBIAN_PACKAGE_ARCHITECTURE: ${{ matrix.deb_arch }}
           CPACK_RPM_PACKAGE_ARCHITECTURE: ${{ matrix.rpm_arch }}
@@ -263,6 +276,70 @@ jobs:
           name: h5cpp-compiler-musl
           if-no-files-found: error
           path: dist/*.tar.gz
+
+  wine-smoke-test:
+    name: Wine smoke-test / Windows NSIS
+    needs: package
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Install Wine
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends wine64 wine32 xvfb
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: h5cpp-compiler-windows-latest-NSIS
+          path: windows-artifact
+
+      - name: Smoke-test under Wine
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export WINEPREFIX=/tmp/wine-smoke
+          export WINEARCH=win64
+
+          # Initialize Wine prefix silently
+          xvfb-run -a wine64 wineboot --init 2>/dev/null || true
+
+          # Locate the NSIS installer
+          installer=( windows-artifact/h5cpp-compiler-*.exe )
+          if [[ ! -f "${installer[0]}" ]]; then
+            echo "No Windows installer found in artifact" >&2
+            exit 1
+          fi
+
+          # Silent install
+          xvfb-run -a wine64 "${installer[0]}" /S
+
+          # Locate installed binary (glob handles versioned install dir)
+          h5cpp_exe=( /tmp/wine-smoke/drive_c/Program\ Files/h5cpp-compiler/*/bin/h5cpp.exe )
+          if [[ ! -f "${h5cpp_exe[0]}" ]]; then
+            echo "h5cpp.exe not found after NSIS install" >&2
+            exit 1
+          fi
+
+          # Run smoke test
+          output=$(xvfb-run -a wine64 "${h5cpp_exe[0]}" --version 2>&1)
+          echo "$output"
+
+          # Validate expected output
+          if ! grep -q "H5CPP:" <<< "$output"; then
+            echo "Smoke test failed: missing H5CPP banner" >&2
+            exit 1
+          fi
+          if ! grep -q "LLVM version" <<< "$output"; then
+            echo "Smoke test failed: missing LLVM version string" >&2
+            exit 1
+          fi
+
+          echo "Wine smoke-test passed"
 
   publish:
     name: Publish Release
